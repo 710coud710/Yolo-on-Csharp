@@ -142,7 +142,7 @@ namespace Client.ViewModels
             StatusMessage = "Export history logic is not implemented yet (requires SQL Server database).";
         }
 
-        private async Task LoadHistory()
+        public async Task LoadHistory()
         {
             if (IsLoading) return;
 

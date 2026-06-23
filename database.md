@@ -166,6 +166,7 @@ machines
 | hostname     | varchar  | Tên host                     |
 | machine_name | varchar  | Tên máy                      |
 | ip           | varchar  | Địa chỉ IP                   |
+| password     | varchar  | Mật khẩu của máy             |
 | status       | varchar  | Online / Offline             |
 | last_seen    | datetime | Thời gian heartbeat gần nhất |
 | created_at   | datetime | Thời gian tạo                |

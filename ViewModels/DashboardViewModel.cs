@@ -233,38 +233,48 @@ namespace Client.ViewModels
                 // Tự động lưu ảnh gốc và kết quả detect
                 try
                 {
-                    var saveDir = settings.Image.SaveDirectory;
-                    if (string.IsNullOrWhiteSpace(saveDir))
+                    bool shouldSave = settings.Image.AutoSave;
+                    if (shouldSave && settings.Image.SaveMode == "NGOnly")
                     {
-                        saveDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "CapturedImages");
-                    }
-                    if (!System.IO.Path.IsPathRooted(saveDir))
-                    {
-                        saveDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, saveDir);
+                        // NG (Not Good) means count is 0 (no items of selected class code detected)
+                        shouldSave = localResult.Result.Count == 0;
                     }
 
-                    var rawFolder = System.IO.Path.Combine(saveDir, "Raw");
-                    var resultFolder = System.IO.Path.Combine(saveDir, "Result");
-
-                    if (!System.IO.Directory.Exists(rawFolder)) System.IO.Directory.CreateDirectory(rawFolder);
-                    if (!System.IO.Directory.Exists(resultFolder)) System.IO.Directory.CreateDirectory(resultFolder);
-
-                    var filename = $"{DateTime.Now:yyyyMMdd_HHmmssfff}.jpg";
-                    var fullRawPath = System.IO.Path.Combine(rawFolder, filename);
-                    var fullResultPath = System.IO.Path.Combine(resultFolder, filename);
-
-                    System.IO.File.WriteAllBytes(fullRawPath, imageData);
-                    if (localResult.AnnotatedImageBytes != null)
+                    if (shouldSave)
                     {
-                        System.IO.File.WriteAllBytes(fullResultPath, localResult.AnnotatedImageBytes);
+                        var saveDir = settings.Image.SaveDirectory;
+                        if (string.IsNullOrWhiteSpace(saveDir))
+                        {
+                            saveDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "CapturedImages");
+                        }
+                        if (!System.IO.Path.IsPathRooted(saveDir))
+                        {
+                            saveDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, saveDir);
+                        }
+
+                        var rawFolder = System.IO.Path.Combine(saveDir, "Raw");
+                        var resultFolder = System.IO.Path.Combine(saveDir, "Result");
+
+                        if (!System.IO.Directory.Exists(rawFolder)) System.IO.Directory.CreateDirectory(rawFolder);
+                        if (!System.IO.Directory.Exists(resultFolder)) System.IO.Directory.CreateDirectory(resultFolder);
+
+                        var filename = $"{DateTime.Now:yyyyMMdd_HHmmssfff}.jpg";
+                        var fullRawPath = System.IO.Path.Combine(rawFolder, filename);
+                        var fullResultPath = System.IO.Path.Combine(resultFolder, filename);
+
+                        System.IO.File.WriteAllBytes(fullRawPath, imageData);
+                        if (localResult.AnnotatedImageBytes != null)
+                        {
+                            System.IO.File.WriteAllBytes(fullResultPath, localResult.AnnotatedImageBytes);
+                        }
+
+                        // Save relative paths to database
+                        rawPath = $"\\Raw\\{filename}";
+                        resultPath = $"\\Result\\{filename}";
+                        localResult.Result.ImagePath = resultPath; // Keep compatibility
+
+                        _logService.LogInfo($"Saved raw image: {fullRawPath} and result image: {fullResultPath}");
                     }
-
-                    // Save relative paths to database
-                    rawPath = $"\\Raw\\{filename}";
-                    resultPath = $"\\Result\\{filename}";
-                    localResult.Result.ImagePath = resultPath; // Keep compatibility
-
-                    _logService.LogInfo($"Saved raw image: {fullRawPath} and result image: {fullResultPath}");
                 }
                 catch (Exception ex)
                 {

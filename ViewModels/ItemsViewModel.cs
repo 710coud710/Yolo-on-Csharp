@@ -55,22 +55,7 @@ namespace Client.ViewModels
         public DbItem? SelectedRow
         {
             get => _selectedRow;
-            set
-            {
-                if (value != null && value != _selectedItem)
-                {
-                    ConfirmSelectItem(value);
-                }
-                else if (value == null && _selectedItem != null)
-                {
-                    _selectedRow = null;
-                    OnPropertyChanged(nameof(SelectedRow));
-                }
-                else
-                {
-                    SetProperty(ref _selectedRow, value);
-                }
-            }
+            set => SetProperty(ref _selectedRow, value);
         }
 
         public string StatusMessage
@@ -241,16 +226,19 @@ namespace Client.ViewModels
                 {
                     bool currentActive = item.IsActive;
                     string actionText = currentActive ? "disable" : "enable";
-                    string titleText = currentActive ? "Confirm Disable" : "Confirm Enable";
-                    var icon = currentActive ? System.Windows.MessageBoxImage.Warning : System.Windows.MessageBoxImage.Question;
 
-                    var result = System.Windows.MessageBox.Show(
-                        $"Are you sure you want to {actionText} item '{item.ItemCode}'?",
-                        titleText,
-                        System.Windows.MessageBoxButton.YesNo,
-                        icon);
+                    bool confirmed = false;
+                    App.Current.Dispatcher.Invoke(() =>
+                    {
+                        var dialog = new Client.Views.PasswordConfirmDialog(_settingsService);
+                        if (App.Current.MainWindow != null)
+                        {
+                            dialog.Owner = App.Current.MainWindow;
+                        }
+                        confirmed = dialog.ShowDialog() == true;
+                    });
 
-                    if (result == System.Windows.MessageBoxResult.Yes)
+                    if (confirmed)
                     {
                         IsLoading = true;
                         StatusMessage = $"{(currentActive ? "Disabling" : "Enabling")} item '{item.ItemCode}'...";
@@ -359,6 +347,22 @@ namespace Client.ViewModels
                     return;
                 }
 
+                bool confirmed = false;
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    var dialog = new Client.Views.PasswordConfirmDialog(_settingsService);
+                    if (App.Current.MainWindow != null)
+                    {
+                        dialog.Owner = App.Current.MainWindow;
+                    }
+                    confirmed = dialog.ShowDialog() == true;
+                });
+
+                if (!confirmed)
+                {
+                    return;
+                }
+
                 IsLoading = true;
                 StatusMessage = $"Adding new item: {NewItemCode}...";
                 try
@@ -460,28 +464,25 @@ namespace Client.ViewModels
             if (!item.IsActive)
             {
                 StatusMessage = "Cannot select an inactive item.";
-                OnPropertyChanged(nameof(SelectedRow));
                 return;
             }
 
-            var result = System.Windows.MessageBox.Show(
-                $"Are you sure you want to select '{item.DisplayName}' for detection?",
-                "Confirm Selection",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Question);
+            bool confirmed = false;
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                var dialog = new Client.Views.ItemSelectConfirmDialog(item.DisplayName);
+                if (App.Current.MainWindow != null)
+                {
+                    dialog.Owner = App.Current.MainWindow;
+                }
+                confirmed = dialog.ShowDialog() == true;
+            });
 
-            if (result == System.Windows.MessageBoxResult.Yes)
+            if (confirmed)
             {
                 SelectedItem = item;
-                _selectedRow = item;
-                OnPropertyChanged(nameof(SelectedItem));
-                OnPropertyChanged(nameof(SelectedRow));
+                SelectedRow = item;
                 StatusMessage = $"Selected item: {item.DisplayName}";
-            }
-            else
-            {
-                // Revert SelectedRow to the old SelectedItem
-                OnPropertyChanged(nameof(SelectedRow));
             }
         }
     }

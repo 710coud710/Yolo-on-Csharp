@@ -76,7 +76,7 @@ namespace Client.Models
         public ImageSettings()
         {
             SaveDirectory = "CapturedImages";
-            SaveMode = "NGOnly";
+            SaveMode = "All";
         }
     }
 }

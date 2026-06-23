@@ -184,6 +184,18 @@ namespace Client.ViewModels
         private void NavigateTo(string section)
         {
             CurrentSection = section;
+            if (section == "Settings")
+            {
+                SettingsViewModel.ResetLock();
+            }
+            else if (section == "Items")
+            {
+                _ = ItemsViewModel.LoadItemsAsync();
+            }
+            else if (section == "History")
+            {
+                _ = HistoryViewModel.LoadHistory();
+            }
             CurrentViewModel = section switch
             {
                 "Dashboard" => DashboardViewModel,

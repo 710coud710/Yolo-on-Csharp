@@ -26,10 +26,19 @@ namespace Client.ViewModels
         private bool _autoSave = true;
         private string _saveDirectory = "CapturedImages";
         private int _imageQuality = 90;
-        private string _saveMode = "NGOnly";
+        private string _saveMode = "All";
         
         private string _databaseConnectionString = string.Empty;
         private bool? _testConnectionOk = null;
+
+        private bool _isUnlocked = false;
+        private string _unlockPassword = string.Empty;
+        private string _unlockErrorMessage = string.Empty;
+        private bool _hasUnlockError = false;
+        private string _newPassword = string.Empty;
+        private string _confirmPassword = string.Empty;
+        private string _currentPassword = string.Empty;
+        private bool _isChangePasswordVisible = false;
 
         private string _statusMessage = "Ready";
         private string _settingsFilePath = string.Empty;
@@ -118,6 +127,54 @@ namespace Client.ViewModels
             set => SetProperty(ref _testConnectionOk, value);
         }
 
+        public bool IsUnlocked
+        {
+            get => _isUnlocked;
+            set => SetProperty(ref _isUnlocked, value);
+        }
+
+        public string UnlockPassword
+        {
+            get => _unlockPassword;
+            set => SetProperty(ref _unlockPassword, value);
+        }
+
+        public string UnlockErrorMessage
+        {
+            get => _unlockErrorMessage;
+            set => SetProperty(ref _unlockErrorMessage, value);
+        }
+
+        public bool HasUnlockError
+        {
+            get => _hasUnlockError;
+            set => SetProperty(ref _hasUnlockError, value);
+        }
+
+        public string NewPassword
+        {
+            get => _newPassword;
+            set => SetProperty(ref _newPassword, value);
+        }
+
+        public string ConfirmPassword
+        {
+            get => _confirmPassword;
+            set => SetProperty(ref _confirmPassword, value);
+        }
+
+        public string CurrentPassword
+        {
+            get => _currentPassword;
+            set => SetProperty(ref _currentPassword, value);
+        }
+
+        public bool IsChangePasswordVisible
+        {
+            get => _isChangePasswordVisible;
+            set => SetProperty(ref _isChangePasswordVisible, value);
+        }
+
         public string StatusMessage
         {
             get => _statusMessage;
@@ -135,6 +192,8 @@ namespace Client.ViewModels
         public ICommand BrowseSaveDirectoryCommand { get; }
         public ICommand ScanModelsCommand { get; }
         public ICommand TestConnectionCommand { get; }
+        public ICommand UnlockCommand { get; }
+        public ICommand ToggleChangePasswordCommand { get; }
 
         public SettingsViewModel(ISettingsService settingsService, ModelManagerService modelManager)
         {
@@ -143,11 +202,13 @@ namespace Client.ViewModels
             
             LoadSettings();
 
-            SaveSettingsCommand = new RelayCommand(_ => SaveSettings());
+            SaveSettingsCommand = new RelayCommand(async _ => await SaveSettingsAsync());
             ResetSettingsCommand = new RelayCommand(_ => ResetSettings());
             BrowseSaveDirectoryCommand = new RelayCommand(_ => BrowseSaveDirectory());
             ScanModelsCommand = new RelayCommand(_ => ScanModels());
             TestConnectionCommand = new RelayCommand(_ => TestConnection());
+            UnlockCommand = new RelayCommand(async _ => await UnlockAsync());
+            ToggleChangePasswordCommand = new RelayCommand(_ => IsChangePasswordVisible = !IsChangePasswordVisible);
 
             _statusMessage = "Ready";
             _settingsFilePath = _settingsService.GetSettingsFilePath();
@@ -183,10 +244,10 @@ namespace Client.ViewModels
             }
         }
 
-        private void SaveSettings()
+        private async Task SaveSettingsAsync()
         {
             StatusMessage = "Saving settings...";
-            
+
             try
             {
                 // Validate confidence
@@ -196,6 +257,53 @@ namespace Client.ViewModels
                     return;
                 }
 
+                // 1. Change password if requested
+                string hostname = Environment.MachineName;
+                var dbService = new DatabaseService(_settingsService);
+                bool dbConnected = true;
+
+                if (IsChangePasswordVisible && !string.IsNullOrEmpty(NewPassword))
+                {
+                    bool currentPasswordVerified = false;
+                    try
+                    {
+                        currentPasswordVerified = await dbService.VerifyMachinePasswordAsync(hostname, CurrentPassword);
+                    }
+                    catch (Exception)
+                    {
+                        // Fallback offline verification
+                        currentPasswordVerified = string.Equals(CurrentPassword, "admin");
+                    }
+
+                    if (!currentPasswordVerified)
+                    {
+                        StatusMessage = "Error: Current machine password is incorrect.";
+                        return;
+                    }
+
+                    if (!string.Equals(NewPassword, ConfirmPassword))
+                    {
+                        StatusMessage = "Error: New password and confirmation do not match.";
+                        return;
+                    }
+
+                    try
+                    {
+                        bool pwUpdated = await dbService.UpdateMachinePasswordAsync(hostname, NewPassword);
+                        if (!pwUpdated)
+                        {
+                            StatusMessage = "Error: Failed to update password in database.";
+                            return;
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        dbConnected = false;
+                        StatusMessage = "Warning: Cannot update password in database because database is offline.";
+                    }
+                }
+
+                // 2. Save local app settings config file
                 var settings = new AppSettings
                 {
                     AiModels = new AiModelSettings
@@ -223,7 +331,21 @@ namespace Client.ViewModels
                 };
 
                 _settingsService.SaveSettings(settings);
-                StatusMessage = "Settings saved successfully !";
+
+                // Clear password fields upon success
+                CurrentPassword = string.Empty;
+                NewPassword = string.Empty;
+                ConfirmPassword = string.Empty;
+                IsChangePasswordVisible = false;
+
+                if (dbConnected)
+                {
+                    StatusMessage = "Settings saved successfully!";
+                }
+                else
+                {
+                    StatusMessage = "Warning: Saved locally, but database is offline!";
+                }
             }
             catch (Exception ex)
             {
@@ -251,8 +373,67 @@ namespace Client.ViewModels
             SaveMode = DefaultSettings.ImageSaveMode;
             DatabaseConnectionString = DefaultSettings.DatabaseConnectionString;
             TestConnectionOk = null;
-            
+
             StatusMessage = "Settings reset to default";
+        }
+
+        public async Task UnlockAsync()
+        {
+            if (string.IsNullOrEmpty(UnlockPassword))
+            {
+                UnlockErrorMessage = "Password cannot be empty.";
+                HasUnlockError = true;
+                return;
+            }
+
+            try
+            {
+                string hostname = Environment.MachineName;
+                var dbService = new DatabaseService(_settingsService);
+                bool passwordVerified = false;
+
+                try
+                {
+                    passwordVerified = await dbService.VerifyMachinePasswordAsync(hostname, UnlockPassword);
+                }
+                catch (Exception)
+                {
+                    // Fallback to local default password check
+                    passwordVerified = string.Equals(UnlockPassword, "admin");
+                }
+
+                if (passwordVerified)
+                {
+                    IsUnlocked = true;
+                    UnlockPassword = string.Empty;
+                    UnlockErrorMessage = string.Empty;
+                    HasUnlockError = false;
+                    StatusMessage = "Settings unlocked successfully.";
+                }
+                else
+                {
+                    IsUnlocked = false;
+                    UnlockErrorMessage = "Incorrect machine password.";
+                    HasUnlockError = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                UnlockErrorMessage = $"Error: {ex.Message}";
+                HasUnlockError = true;
+            }
+        }
+
+        public void ResetLock()
+        {
+            IsUnlocked = false;
+            UnlockPassword = string.Empty;
+            UnlockErrorMessage = string.Empty;
+            HasUnlockError = false;
+            CurrentPassword = string.Empty;
+            NewPassword = string.Empty;
+            ConfirmPassword = string.Empty;
+            IsChangePasswordVisible = false;
         }
 
         private void ScanModels()
@@ -270,20 +451,25 @@ namespace Client.ViewModels
 
         private void BrowseSaveDirectory()
         {
-            // Mở thư mục lưu ảnh cục bộ
             try
             {
-                var fullPath = SaveDirectory;
-                if (!Path.IsPathRooted(fullPath))
+                var initialDir = SaveDirectory;
+                if (!string.IsNullOrWhiteSpace(initialDir) && !Path.IsPathRooted(initialDir))
                 {
-                    fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fullPath);
+                    initialDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, initialDir);
                 }
-                if (!Directory.Exists(fullPath))
+
+                var dialog = new Microsoft.Win32.OpenFolderDialog
                 {
-                    Directory.CreateDirectory(fullPath);
+                    Title = "Select Image Save Directory",
+                    InitialDirectory = Directory.Exists(initialDir) ? initialDir : AppDomain.CurrentDomain.BaseDirectory
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    SaveDirectory = dialog.FolderName;
+                    StatusMessage = $"Selected save directory: {SaveDirectory}";
                 }
-                System.Diagnostics.Process.Start("explorer.exe", fullPath);
-                StatusMessage = $"Opened save directory: {fullPath}";
             }
             catch (Exception ex)
             {

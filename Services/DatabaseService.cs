@@ -132,6 +132,7 @@ namespace Client.Services
                                 hostname VARCHAR(100) NOT NULL,
                                 machine_name NVARCHAR(100) NOT NULL,
                                 ip VARCHAR(50) NULL,
+                                password VARCHAR(255) NOT NULL,
                                 status VARCHAR(20) NOT NULL DEFAULT 'Offline',
                                 last_seen DATETIME NULL,
                                 created_at DATETIME NOT NULL DEFAULT GETDATE()
@@ -587,9 +588,9 @@ namespace Client.Services
 
             string ip = GetLocalIpAddress();
             string insertQuery = @"
-                INSERT INTO machines (hostname, machine_name, ip, status, last_seen, created_at)
+                INSERT INTO machines (hostname, machine_name, ip, password, status, last_seen, created_at)
                 OUTPUT INSERTED.id
-                VALUES (@Hostname, @MachineName, @Ip, 'Online', GETDATE(), GETDATE())";
+                VALUES (@Hostname, @MachineName, @Ip, 'admin', 'Online', GETDATE(), GETDATE())";
 
             using (var cmd = new SqlCommand(insertQuery, connection))
             {
@@ -735,9 +736,9 @@ namespace Client.Services
 
                 string ip = GetLocalIpAddress();
                 string insertQuery = @"
-                    INSERT INTO machines (hostname, machine_name, ip, status, last_seen, created_at)
+                    INSERT INTO machines (hostname, machine_name, ip, password, status, last_seen, created_at)
                     OUTPUT INSERTED.id
-                    VALUES (@Hostname, @MachineName, @Ip, 'Online', GETDATE(), GETDATE())";
+                    VALUES (@Hostname, @MachineName, @Ip, 'admin', 'Online', GETDATE(), GETDATE())";
 
                 using (var cmd = new SqlCommand(insertQuery, connection))
                 {
@@ -883,6 +884,77 @@ namespace Client.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error adding item: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> VerifyMachinePasswordAsync(string hostname, string password)
+        {
+            string connString = GetConnectionString();
+            if (string.IsNullOrWhiteSpace(connString)) return false;
+            try
+            {
+                using (var connection = new SqlConnection(connString))
+                {
+                    await connection.OpenAsync();
+                    // Kiểm tra máy đã được đăng ký chưa bằng hostname.
+                    string checkQuery = "SELECT password FROM machines WHERE hostname = @Hostname";
+                    using (var checkCmd = new SqlCommand(checkQuery, connection))
+                    {
+                        checkCmd.Parameters.AddWithValue("@Hostname", hostname);
+                        var dbPassword = await checkCmd.ExecuteScalarAsync() as string;
+                        if (dbPassword != null)
+                        {
+                            return string.Equals(dbPassword, password);
+                        }
+                    }
+
+                    //Máy chưa tồn tại. Hãy đăng ký mới với mật khẩu mặc định 'admin'.
+                    string ip = GetLocalIpAddress();
+                    string insertQuery = @"
+                        INSERT INTO machines (hostname, machine_name, ip, password, status, last_seen, created_at)
+                        VALUES (@Hostname, @MachineName, @Ip, 'admin', 'Online', GETDATE(), GETDATE())";
+                    using (var insertCmd = new SqlCommand(insertQuery, connection))
+                    {
+                        insertCmd.Parameters.AddWithValue("@Hostname", hostname);
+                        insertCmd.Parameters.AddWithValue("@MachineName", hostname);
+                        insertCmd.Parameters.AddWithValue("@Ip", ip);
+                        await insertCmd.ExecuteNonQueryAsync();
+                    }
+                    
+                    // If it was just registered, default password is 'admin'
+                    return string.Equals("admin", password);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error verifying machine password: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<bool> UpdateMachinePasswordAsync(string hostname, string newPassword)
+        {
+            string connString = GetConnectionString();
+            if (string.IsNullOrWhiteSpace(connString)) return false;
+            try
+            {
+                using (var connection = new SqlConnection(connString))
+                {
+                    await connection.OpenAsync();
+                    string query = "UPDATE machines SET password = @NewPassword WHERE hostname = @Hostname";
+                    using (var cmd = new SqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@NewPassword", newPassword);
+                        cmd.Parameters.AddWithValue("@Hostname", hostname);
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        return rows > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating machine password: {ex.Message}");
                 return false;
             }
         }

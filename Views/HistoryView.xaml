@@ -141,7 +141,7 @@
                 </Button>
 
                 <!-- Clear Button -->
-                <Button Command="{Binding ClearHistoryCommand}"
+                <!-- <Button Command="{Binding ClearHistoryCommand}"
                         Width="92"
                         Height="36"
                         Background="#FF3B30"
@@ -176,7 +176,7 @@
                             </Style.Triggers>
                         </Style>
                     </Button.Style>
-                </Button>
+                </Button> -->
             </StackPanel>
         </Grid>
 

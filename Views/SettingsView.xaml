@@ -7,7 +7,9 @@
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="800"
              Background="#F2F2F7">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.IsSharedSizeScope="True">
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.IsSharedSizeScope="True"
+                      Visibility="{Binding IsUnlocked, Converter={StaticResource BoolToVisibilityConverter}}">
         <Grid Margin="16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -31,6 +33,8 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="10"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="10"/>
                     <RowDefinition Height="Auto"/>
@@ -346,6 +350,199 @@
                         </Border>
                     </StackPanel>
                 </Border>
+
+                <!-- Database & Security Settings Card (Full width) -->
+                <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
+                        Background="#FFFFFF"
+                        BorderBrush="#E5E5EA"
+                        BorderThickness="1"
+                        CornerRadius="16"
+                        Padding="20"
+                        Margin="0,16,0,0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="Database &amp; Security Settings" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Foreground="#1C1C1E"
+                                   Margin="0,0,0,16"/>
+                        
+                        <!-- Connection String -->
+                        <TextBlock Text="Database Connection String:" 
+                                   Foreground="#8E8E93" 
+                                   FontSize="13"
+                                   FontWeight="Medium"
+                                   Margin="0,0,0,6"/>
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Border Grid.Column="0" CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36">
+                                <TextBox Text="{Binding DatabaseConnectionString, Mode=TwoWay}" 
+                                         Padding="10,0"
+                                         FontSize="13"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         VerticalContentAlignment="Center"
+                                         materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                            </Border>
+                            
+                            <Button Grid.Column="2"
+                                    Content="Test Connection" 
+                                    Command="{Binding TestConnectionCommand}"
+                                    Height="36" 
+                                    Width="140"
+                                    Background="#E5F1FF" 
+                                    Foreground="#007AFF" 
+                                    BorderThickness="0"
+                                    FontWeight="SemiBold"
+                                    Cursor="Hand">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            CornerRadius="18" 
+                                                            Padding="10,0">
+                                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                                          VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#CCE3FF"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+
+                        <!-- Password Authentication Section Header & Button -->
+                        <Grid Margin="0,8,0,12">
+                            <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="15"/>
+                                    <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Grid.Column="0"
+                                       Text="Security Settings:" 
+                                       FontSize="14" 
+                                       FontWeight="Bold" 
+                                       Foreground="#1C1C1E"
+                                       VerticalAlignment="Center"/>
+                            
+                            <Button Grid.Column="2"
+                                    Content="Change Machine Password"
+                                    Command="{Binding ToggleChangePasswordCommand}"
+                                    Height="32"
+                                    Background="#E5F1FF"
+                                    Foreground="#007AFF"
+                                    BorderThickness="0"
+                                    FontWeight="SemiBold"
+                                    Cursor="Hand">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            CornerRadius="16" 
+                                                            Padding="12,0">
+                                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                                          VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#CCE3FF"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+
+                        <!-- Password Change Inputs -->
+                        <Grid Visibility="{Binding IsChangePasswordVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+                              Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Current Machine Password *:" 
+                                           Foreground="#8E8E93" 
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Margin="0,0,0,6"/>
+                                <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36">
+                                    <PasswordBox materialDesign:PasswordBoxAssist.Password="{Binding CurrentPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="10,0"
+                                                 FontSize="13"
+                                                 BorderThickness="0"
+                                                 Background="Transparent"
+                                                 VerticalContentAlignment="Center"
+                                                 materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"
+                                                 materialDesign:HintAssist.Hint="Required"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- New Password -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="New Password *:" 
+                                           Foreground="#8E8E93" 
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Margin="0,0,0,6"/>
+                                <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36">
+                                    <PasswordBox materialDesign:PasswordBoxAssist.Password="{Binding NewPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="10,0"
+                                                 FontSize="13"
+                                                 BorderThickness="0"
+                                                 Background="Transparent"
+                                                 VerticalContentAlignment="Center"
+                                                 materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"
+                                                 materialDesign:HintAssist.Hint="New password"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Confirm New Password -->
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="Confirm New Password *:" 
+                                           Foreground="#8E8E93" 
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Margin="0,0,0,6"/>
+                                <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36">
+                                    <PasswordBox materialDesign:PasswordBoxAssist.Password="{Binding ConfirmPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Padding="10,0"
+                                                 FontSize="13"
+                                                 BorderThickness="0"
+                                                 Background="Transparent"
+                                                 VerticalContentAlignment="Center"
+                                                 materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"
+                                                 materialDesign:HintAssist.Hint="Must match new password"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
             </Grid>
 
             <!-- Bottom Action Footer Card -->
@@ -444,4 +641,114 @@
             </Border>
         </Grid>
     </ScrollViewer>
+
+        <!-- Locked Overlay Gate -->
+        <Border Background="#F2F2F7"
+                Visibility="{Binding IsUnlocked, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+            <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Border Background="#FFFFFF"
+                        BorderBrush="#E5E5EA"
+                        BorderThickness="1"
+                        CornerRadius="24"
+                        Width="360"
+                        Padding="32,24">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="25" ShadowDepth="0" Color="Black" Opacity="0.08"/>
+                    </Border.Effect>
+                    <StackPanel HorizontalAlignment="Stretch">
+                        <!-- Lock Icon and Title -->
+                        <materialDesign:PackIcon Kind="ShieldLockOutline"
+                                                 Width="56"
+                                                 Height="56"
+                                                 Foreground="#FF9500"
+                                                 HorizontalAlignment="Center"
+                                                 Margin="0,8,0,16"/>
+                        
+                        <TextBlock Text="Settings Protected"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="#1C1C1E"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,8"/>
+                        
+                        <TextBlock Text="Enter the password for this machine to access or modify settings."
+                                   FontSize="13"
+                                   Foreground="#8E8E93"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,24"/>
+
+                        <!-- Password Input -->
+                        <TextBlock Text="Machine Password"
+                                   Foreground="#8E8E93"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,6"/>
+                        
+                        <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="40" Margin="0,0,0,8">
+                            <PasswordBox materialDesign:PasswordBoxAssist.Password="{Binding UnlockPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Padding="12,0"
+                                         FontSize="14"
+                                         BorderThickness="0"
+                                         Background="Transparent"
+                                         VerticalContentAlignment="Center"
+                                         materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"
+                                         materialDesign:HintAssist.Hint="Enter password"
+                                         materialDesign:HintAssist.Foreground="#C7C7CC">
+                                <PasswordBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding UnlockCommand}"/>
+                                </PasswordBox.InputBindings>
+                            </PasswordBox>
+                        </Border>
+
+                        <!-- Error Message -->
+                        <TextBlock Text="{Binding UnlockErrorMessage}"
+                                   Foreground="#FF3B30"
+                                   FontSize="20"
+                                   FontWeight="Medium"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   Visibility="{Binding HasUnlockError, Converter={StaticResource BoolToVisibilityConverter}}"
+                                   Margin="0,0,0,10"
+                                   HorizontalAlignment="Center"/>
+
+                        <!-- Spacing if no error to prevent layout shifting -->
+                        <Separator Height="8" Background="Transparent" Visibility="{Binding HasUnlockError, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+
+                        <!-- Unlock Button -->
+                        <Button Content="Unlock Settings"
+                                Command="{Binding UnlockCommand}"
+                                Height="40"
+                                Background="#007AFF"
+                                Foreground="White"
+                                BorderThickness="0"
+                                FontWeight="SemiBold"
+                                Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        CornerRadius="20">
+                                                    <ContentPresenter HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#0062CC"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
 </UserControl>

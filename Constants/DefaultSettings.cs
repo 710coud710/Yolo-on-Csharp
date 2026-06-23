@@ -22,7 +22,7 @@ namespace Client.Constants
         public const bool ImageAutoSave = true;
         public const int ImageQuality = 90;
         public const string ImageSaveDirectoryName = "CapturedImages";
-        public const string ImageSaveMode = "NGOnly";
+        public const string ImageSaveMode = "All";
 
         // Database Settings
         // public const string DatabaseConnectionString = "Data Source=192.168.7.103;Persist Security Info=True;User ID=qa_web;Password=Adv@1234!;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Application Name=\"SQL Server Management Studio\";Command Timeout=0";

@@ -169,7 +169,7 @@
                                  IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Result}"
                                  Command="{Binding NavigateToResultCommand}">
                         <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="Image"
+                            <materialDesign:PackIcon Kind="Artboard"
                                                      Width="20"
                                                      Height="20"
                                                      Margin="0,0,12,0"
@@ -186,7 +186,7 @@
                                  IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Items}"
                                  Command="{Binding NavigateToItemsCommand}">
                         <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="FormatListBulleted"
+                            <materialDesign:PackIcon Kind="Cube"
                                                      Width="20"
                                                      Height="20"
                                                      Margin="0,0,12,0"
@@ -283,7 +283,7 @@
                                  IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Result}"
                                  Style="{StaticResource CollapsedSidebarButtonStyle}"
                                  ToolTip="Result">
-                        <materialDesign:PackIcon Kind="Image" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                        <materialDesign:PackIcon Kind="Artboard" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
                     </RadioButton>
 
                     <RadioButton Command="{Binding NavigateToItemsCommand}"
@@ -291,7 +291,7 @@
                                  IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Items}"
                                  Style="{StaticResource CollapsedSidebarButtonStyle}"
                                  ToolTip="Items">
-                        <materialDesign:PackIcon Kind="FormatListBulleted" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                        <materialDesign:PackIcon Kind="Cube" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
                     </RadioButton>
                     
                     <RadioButton Command="{Binding NavigateToModelCommand}"
@@ -337,13 +337,15 @@
                             </Style>
                         </StackPanel.Style>
                         <TextBlock Text="Version 1.0.0.0" 
-                                   FontSize="11" 
+                                   FontSize="13" 
                                    Foreground="#8E8E93" 
                                    HorizontalAlignment="Center"/>
-                        <TextBlock Text="Developed by Innovation © 2026" 
-                                   FontSize="11" 
+                        <TextBlock Text="©2026 - Innovation Team&#x0a; All rights reserved" 
+                                   FontSize="13" 
+                                   TextWrapping="Wrap"
                                    Foreground="#8E8E93" 
-                                   HorizontalAlignment="Center" 
+                                   HorizontalAlignment="Stretch" 
+                                   TextAlignment="Center"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                 </Border>

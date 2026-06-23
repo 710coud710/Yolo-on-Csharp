@@ -249,19 +249,21 @@
                                                 Content="Select"
                                                 Height="28"
                                                 Margin="0,0,8,0"
-                                                Background="#E5F1FF"
-                                                Foreground="#007AFF"
                                                 BorderThickness="0"
                                                 FontSize="11"
                                                 FontWeight="SemiBold"
                                                 Cursor="Hand">
                                             <Button.Style>
                                                 <Style TargetType="Button">
+                                                    <Setter Property="Background" Value="#E5F1FF"/>
+                                                    <Setter Property="Foreground" Value="#007AFF"/>
                                                     <Setter Property="Template">
                                                         <Setter.Value>
                                                             <ControlTemplate TargetType="Button">
                                                                 <Border Background="{TemplateBinding Background}" CornerRadius="14" Padding="12,2">
-                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                                      VerticalAlignment="Center"
+                                                                                      TextElement.Foreground="{TemplateBinding Foreground}"/>
                                                                 </Border>
                                                             </ControlTemplate>
                                                         </Setter.Value>
