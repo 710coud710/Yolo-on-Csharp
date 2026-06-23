@@ -1,0 +1,454 @@
+<Window x:Class="Client.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Client"
+        xmlns:converters="clr-namespace:Client.Converters"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        mc:Ignorable="d"
+        Title="Vision Counter v1.0.0.0" 
+        Icon="pack://application:,,,/assets/icon.ico"
+        Height="768" 
+        Width="1366"
+        WindowStartupLocation="CenterScreen"
+        Background="#F2F2F7">
+    
+    <Window.Resources>
+        <converters:ViewModelToViewConverter x:Key="ViewModelToViewConverter"/>
+        <converters:EqualsConverter x:Key="EqualsConverter"/>
+        
+        <Style x:Key="SidebarButtonStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#3A3A3C"/>
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="Margin" Value="0,4,0,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="10" 
+                                Margin="12,0">
+                            <ContentPresenter HorizontalAlignment="Left" 
+                                              VerticalAlignment="Center" 
+                                              Margin="16,0"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F2F2F7"/>
+                    <Setter Property="Foreground" Value="#1C1C1E"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="#007AFF"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="CollapsedSidebarButtonStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#3A3A3C"/>
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="Margin" Value="8,4,8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F2F2F7"/>
+                    <Setter Property="Foreground" Value="#1C1C1E"/>
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="#007AFF"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" 
+                Background="#FFFFFF"
+                BorderBrush="#E5E5EA"
+                BorderThickness="0,0,1,0">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Width" Value="250"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSidebarOpen}" Value="False">
+                            <Setter Property="Width" Value="60"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <StackPanel Grid.Row="0" Margin="0,15,0,15">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSidebarOpen}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <Image Width="60"
+                        Height="42"
+                        Stretch="Uniform"
+                        Source="pack://application:,,,/assets/Logo.png"/>
+                    <TextBlock Text="Vision Counter" 
+                               FontSize="16" 
+                               FontWeight="SemiBold"
+                               Foreground="#8E8E93" 
+                               HorizontalAlignment="Center" 
+                               Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <!-- Navigation Menu (Full) -->
+                <StackPanel Grid.Row="1">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSidebarOpen}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    
+                    <RadioButton Style="{StaticResource SidebarButtonStyle}" 
+                                 GroupName="Navigation"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Dashboard}"
+                                 Command="{Binding NavigateToDashboardCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="ViewDashboard"
+                                                     Width="20"
+                                                     Height="20"
+                                                     Margin="0,0,12,0"
+                                                     Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"
+                                                     VerticalAlignment="Center"/>
+                            <TextBlock Text="Dashboard" 
+                                       FontSize="14" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton Style="{StaticResource SidebarButtonStyle}"
+                                 GroupName="Navigation"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Result}"
+                                 Command="{Binding NavigateToResultCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Image"
+                                                     Width="20"
+                                                     Height="20"
+                                                     Margin="0,0,12,0"
+                                                     Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"
+                                                     VerticalAlignment="Center"/>
+                            <TextBlock Text="Result"
+                                       FontSize="14"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton Style="{StaticResource SidebarButtonStyle}"
+                                 GroupName="Navigation"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Items}"
+                                 Command="{Binding NavigateToItemsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="FormatListBulleted"
+                                                     Width="20"
+                                                     Height="20"
+                                                     Margin="0,0,12,0"
+                                                     Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"
+                                                     VerticalAlignment="Center"/>
+                            <TextBlock Text="Items" 
+                                       FontSize="14" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton Style="{StaticResource SidebarButtonStyle}"
+                                 GroupName="Navigation"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Model}"
+                                 Command="{Binding NavigateToModelCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Robot"
+                                                     Width="20"
+                                                     Height="20"
+                                                     Margin="0,0,12,0"
+                                                     Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"
+                                                     VerticalAlignment="Center"/>
+                            <TextBlock Text="Model" 
+                                       FontSize="14" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton Style="{StaticResource SidebarButtonStyle}"
+                                 GroupName="Navigation"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=History}"
+                                 Command="{Binding NavigateToHistoryCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="History"
+                                                     Width="20"
+                                                     Height="20"
+                                                     Margin="0,0,12,0"
+                                                     Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"
+                                                     VerticalAlignment="Center"/>
+                            <TextBlock Text="History" 
+                                       FontSize="14" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton Style="{StaticResource SidebarButtonStyle}"
+                                 GroupName="Navigation"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Settings}"
+                                 Command="{Binding NavigateToSettingsCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="Cog"
+                                                     Width="20"
+                                                     Height="20"
+                                                     Margin="0,0,12,0"
+                                                     Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"
+                                                     VerticalAlignment="Center"/>
+                            <TextBlock Text="Settings" 
+                                       FontSize="14" 
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+                </StackPanel>
+
+                <!-- Navigation Menu (Collapsed) -->
+                <StackPanel Grid.Row="1" Margin="0,0,0,0">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSidebarOpen}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+
+                    <Image 
+                        Margin="0,15,0,10"
+                        Width="36"
+                        Height="36"
+                        Stretch="Uniform"            
+                        Source="pack://application:,,,/assets/Logo.png"/>
+
+                    <RadioButton Command="{Binding NavigateToDashboardCommand}"
+                                 GroupName="NavigationCollapsed"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Dashboard}"
+                                 Style="{StaticResource CollapsedSidebarButtonStyle}"
+                                 ToolTip="Dashboard">
+                        <materialDesign:PackIcon Kind="ViewDashboard" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                    </RadioButton>
+
+                    <RadioButton Command="{Binding NavigateToResultCommand}"
+                                 GroupName="NavigationCollapsed"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Result}"
+                                 Style="{StaticResource CollapsedSidebarButtonStyle}"
+                                 ToolTip="Result">
+                        <materialDesign:PackIcon Kind="Image" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                    </RadioButton>
+
+                    <RadioButton Command="{Binding NavigateToItemsCommand}"
+                                 GroupName="NavigationCollapsed"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Items}"
+                                 Style="{StaticResource CollapsedSidebarButtonStyle}"
+                                 ToolTip="Items">
+                        <materialDesign:PackIcon Kind="FormatListBulleted" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                    </RadioButton>
+                    
+                    <RadioButton Command="{Binding NavigateToModelCommand}"
+                                 GroupName="NavigationCollapsed"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Model}"
+                                 Style="{StaticResource CollapsedSidebarButtonStyle}"
+                                 ToolTip="Model">
+                        <materialDesign:PackIcon Kind="Robot" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                    </RadioButton>
+                    
+                    <RadioButton Command="{Binding NavigateToHistoryCommand}"
+                                 GroupName="NavigationCollapsed"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=History}"
+                                 Style="{StaticResource CollapsedSidebarButtonStyle}"
+                                 ToolTip="History">
+                        <materialDesign:PackIcon Kind="History" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                    </RadioButton>
+                    
+                    <RadioButton Command="{Binding NavigateToSettingsCommand}"
+                                 GroupName="NavigationCollapsed"
+                                 IsChecked="{Binding CurrentSection, Mode=TwoWay, Converter={StaticResource EqualsConverter}, ConverterParameter=Settings}"
+                                 Style="{StaticResource CollapsedSidebarButtonStyle}"
+                                 ToolTip="Settings">
+                        <materialDesign:PackIcon Kind="Cog" Width="20" Height="20" Foreground="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                    </RadioButton>
+                </StackPanel>
+
+                <!-- Footer -->
+                <Border Grid.Row="2" 
+                        Background="Transparent" 
+                        BorderBrush="#E5E5EA"
+                        BorderThickness="0,1,0,0"
+                        Padding="10">
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSidebarOpen}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="Version 1.0.0.0" 
+                                   FontSize="11" 
+                                   Foreground="#8E8E93" 
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Developed by Innovation © 2026" 
+                                   FontSize="11" 
+                                   Foreground="#8E8E93" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Top Bar -->
+            <Border Grid.Row="0" 
+                    Background="#FFFFFF" 
+                    BorderThickness="0,0,0,1" 
+                    BorderBrush="#E5E5EA" 
+                    Height="60">
+                <Grid Margin="20,0">
+                    <StackPanel Orientation="Horizontal" 
+                                VerticalAlignment="Center">
+                        <Button Command="{Binding ToggleSidebarCommand}"
+                                Width="40" 
+                                Height="40" 
+                                Background="Transparent" 
+                                BorderThickness="0" 
+                                Foreground="#3C3C43"
+                                Cursor="Hand"
+                                ToolTip="Toggle Sidebar" Click="Button_Click">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="20">
+                                                    <materialDesign:PackIcon Kind="Menu" Width="22" Height="22" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#F2F2F7"/>
+                                            <Setter Property="Foreground" Value="#007AFF"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" 
+                                HorizontalAlignment="Right" 
+                                VerticalAlignment="Center">
+                        <!-- AI Status Badge -->
+                        <Border Background="#F2F2F7" CornerRadius="12" Padding="10,4" Margin="0,0,10,0" BorderBrush="#E5E5EA" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Robot"
+                                                     Width="16"
+                                                     Height="16"
+                                                     Margin="0,0,6,0"
+                                                     Foreground="#FF3B30"
+                                                     VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding SystemStatusText}" 
+                                           FontSize="12" 
+                                           FontWeight="Medium"
+                                           Foreground="#3A3A3C" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,6,0"/>
+                                <Ellipse Width="8" 
+                                         Height="8" 
+                                         Fill="{Binding SystemStatusDot}"
+                                         VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- DB Status Badge -->
+                        <Border Background="#F2F2F7" CornerRadius="12" Padding="10,4" BorderBrush="#E5E5EA" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Database"
+                                                     Width="16"
+                                                     Height="16"
+                                                     Margin="0,0,6,0"                                      
+                                                     Foreground="#007AFF"
+                                                     VerticalAlignment="Center"/>
+                                <!--<TextBlock Text="database" 
+                                           FontSize="12" 
+                                           FontWeight="Medium"
+                                           Foreground="#3A3A3C" 
+                                           VerticalAlignment="Center" 
+                                           Margin="0,0,6,0"/>-->
+                                <Ellipse Width="8" 
+                                         Height="8" 
+                                         Fill="{Binding DbStatusDot}"
+                                         VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Content Area -->
+            <ContentControl Grid.Row="1" 
+                            Content="{Binding CurrentViewModel, Converter={StaticResource ViewModelToViewConverter}}"/>
+        </Grid>
+    </Grid>
+</Window>

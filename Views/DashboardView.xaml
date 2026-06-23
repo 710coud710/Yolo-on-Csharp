@@ -1,0 +1,583 @@
+ <UserControl x:Class="Client.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="#F2F2F7">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+    
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition MaxWidth="320"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Image Preview Area -->
+            <Border Grid.Column="0" 
+                    Background="#FFFFFF" 
+                    BorderBrush="#E5E5EA" 
+                    BorderThickness="1" 
+                    CornerRadius="16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
+                </Border.Effect>
+                <Grid>
+                    <!-- Camera Preview -->
+                    <Viewbox Stretch="Uniform" Margin="8">
+                        <Image x:Name="CameraPreview"                               
+                                Source="{Binding DisplayFrame}"
+                                Stretch="Uniform"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+                    </Viewbox>
+
+                    <!-- Detect Loading Overlay -->
+                    <Border Background="#80000000"
+                            Visibility="{Binding IsDetecting, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            CornerRadius="16">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="Detecting..."
+                                       Foreground="White"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"/>
+                            <ProgressBar Width="200"
+                                         Height="6"
+                                         Margin="0,12,0,0"
+                                         IsIndeterminate="True"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Placeholder when no camera -->
+                    <TextBlock Text="Camera Preview" 
+                               FontSize="16" 
+                               Foreground="#8E8E93"
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DisplayFrame}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+
+            <!-- Control Panel -->
+            <Border Grid.Column="2" 
+                    Background="#FFFFFF" 
+                    BorderBrush="#E5E5EA" 
+                    BorderThickness="1" 
+                    CornerRadius="16" 
+                    Padding="16">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
+                </Border.Effect>
+                
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Control Panel Header (Operations / Camera Settings + Toggle/Save Button) -->
+                    <Grid Grid.Row="0" Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Header Title -->
+                        <TextBlock Grid.Column="0" 
+                                   FontSize="15" 
+                                   FontWeight="Bold" 
+                                   Foreground="#1C1C1E"
+                                   VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Operations"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSettingsMode}" Value="True">
+                                            <Setter Property="Text" Value="Camera Settings"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        
+                        <!-- Toggle Settings / Save Settings Button -->
+                        <Button Grid.Column="1"
+                                Command="{Binding ToggleSettingsCommand}"
+                                Height="30" 
+                                Background="Transparent" 
+                                Foreground="#007AFF" 
+                                BorderThickness="0"
+                                FontWeight="SemiBold"
+                                Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        CornerRadius="15" 
+                                                        Padding="8,0">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <materialDesign:PackIcon Kind="Cog" Width="14" Height="14" Foreground="#007AFF" VerticalAlignment="Center"/>
+                                                        <TextBlock Text="Settings" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="12"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#F2F2F7"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsSettingsMode}" Value="True">
+                                            <Setter Property="Background" Value="#34C759"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="{TemplateBinding Background}" 
+                                                                CornerRadius="15" 
+                                                                Padding="10,0">
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <materialDesign:PackIcon Kind="ContentSave" Width="14" Height="14" Foreground="White" VerticalAlignment="Center"/>
+                                                                <TextBlock Text="Save Setting" Margin="4,0,0,0" VerticalAlignment="Center" FontSize="12"/>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsSettingsMode}" Value="True"/>
+                                                <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Background" Value="#2EB852"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+
+                    <!-- Normal Dashboard Operations Section -->
+                    <StackPanel Grid.Row="1" Visibility="{Binding IsSettingsMode, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+                        <!-- Camera Status -->
+                        <TextBlock Margin="0,0,0,12" FontSize="13">
+                            <Run Text="Status: " FontWeight="SemiBold" Foreground="#1C1C1E"/>
+                            <Run Text="{Binding StatusMessage, Mode=OneWay}" Foreground="#8E8E93"/>
+                        </TextBlock>
+
+                        <!-- Connection Buttons -->
+                        <!-- Connect Button - Only visible when NOT connected -->
+                        <Button Command="{Binding ConnectCameraCommand}"
+                                Height="40" 
+                                Margin="0,0,0,12"
+                                Background="#34C759" 
+                                Foreground="White" 
+                                BorderThickness="0"
+                                FontWeight="SemiBold"
+                                Cursor="Hand">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <materialDesign:PackIcon Kind="Video"
+                                                             Width="18"
+                                                             Height="18"
+                                                             Margin="0,0,8,0"                                      
+                                                             Foreground="White"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Connect Camera" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button.Content>
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        CornerRadius="20" 
+                                                        Padding="10,0">
+                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#2EB852"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsCameraConnected}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Disconnect Button - Only visible when connected -->
+                        <Button Command="{Binding DisconnectCameraCommand}"
+                                Height="40" 
+                                Margin="0,0,0,12"
+                                Background="#FF3B30" 
+                                Foreground="White" 
+                                BorderThickness="0"
+                                FontWeight="SemiBold"
+                                Cursor="Hand">
+                            <Button.Content>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <materialDesign:PackIcon Kind="VideoOff"
+                                                             Width="18"
+                                                             Height="18"
+                                                             Margin="0,0,8,0"                                      
+                                                             Foreground="White"
+                                                             VerticalAlignment="Center"/>
+                                    <TextBlock Text="Disconnect Camera" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button.Content>
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        CornerRadius="20" 
+                                                        Padding="10,0">
+                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#E0352B"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsCameraConnected}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Selected Material Display (Read-Only) -->
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,16">
+                            <TextBlock Text="Target Item: " 
+                                       FontWeight="Medium" 
+                                       Foreground="#8E8E93"
+                                       FontSize="13"/>
+                            <TextBlock Text="{Binding SelectedItem.ItemCode, TargetNullValue='None (Select on Items tab)'}" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="#007AFF"
+                                       FontSize="13"/>
+                        </StackPanel>
+
+                        <!-- Start Button - Trigger capture + detect -->
+                        <Button
+                                Command="{Binding StartCommand}"
+                                Height="46" 
+                                Background="#007AFF" 
+                                Foreground="White" 
+                                BorderThickness="0"
+                                FontSize="15"
+                                FontWeight="Bold"
+                                Cursor="Hand"
+                                IsEnabled="{Binding IsCameraConnected}">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Play" Width="18" Height="18" Foreground="White" />
+                                <TextBlock Text="Start Count" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        CornerRadius="23" 
+                                                        Padding="10,0">
+                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#0062CC"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsDetecting}" Value="True">
+                                            <Setter Property="Background" Value="#E5E5EA"/>
+                                            <Setter Property="Foreground" Value="#8E8E93"/>
+                                            <Setter Property="Cursor" Value="No"/>
+                                        </DataTrigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Background" Value="#E5E5EA"/>
+                                            <Setter Property="Foreground" Value="#8E8E93"/>
+                                            <Setter Property="Cursor" Value="No"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Last Result -->
+                        <Border Margin="0,16,0,0" 
+                                Background="#F2F2F7" 
+                                BorderBrush="#E5E5EA" 
+                                BorderThickness="1" 
+                                CornerRadius="12" 
+                                Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="Last Result" 
+                                           FontWeight="SemiBold" 
+                                           Foreground="#1C1C1E"
+                                           Margin="0,0,0,8"
+                                           FontSize="13"/>
+                                <TextBlock Foreground="#3A3A3C" FontSize="13">
+                                    <Run Text="Count: " FontWeight="Medium"/>
+                                    <Run Text="{Binding LastResult.Count, Mode=OneWay, FallbackValue=--}" FontWeight="SemiBold" Foreground="#007AFF"/>
+                                </TextBlock>
+                                <TextBlock Foreground="#3A3A3C" Margin="0,4,0,0" FontSize="13">
+                                    <Run Text="Time: " FontWeight="Medium"/>
+                                    <Run Text="{Binding LastResult.Timestamp, Mode=OneWay, StringFormat='HH:mm:ss', FallbackValue=--}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Camera Settings Section -->
+                    <StackPanel Grid.Row="1" Visibility="{Binding IsSettingsMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <!-- Camera IP Address -->
+                        <TextBlock Text="Camera IP Address:" 
+                                   Foreground="#8E8E93" 
+                                   FontSize="12"
+                                   FontWeight="Medium"
+                                   Margin="0,0,0,4"/>
+                        <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32" Margin="0,0,0,10">
+                            <TextBox Text="{Binding CameraIp, Mode=TwoWay}" 
+                                     Padding="8,0"
+                                     FontSize="12"
+                                     BorderThickness="0"
+                                     Background="Transparent"
+                                     VerticalContentAlignment="Center"
+                                     materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                        </Border>
+
+                        <!-- Trigger Mode -->
+                        <TextBlock Text="Trigger Mode:" 
+                                   Foreground="#8E8E93" 
+                                   FontSize="12"
+                                   FontWeight="Medium"
+                                   Margin="0,0,0,4"/>
+                        <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32" Margin="0,0,0,10">
+                            <ComboBox SelectedValue="{Binding TriggerMode, Mode=TwoWay}"
+                                      SelectedValuePath="Content"
+                                      Padding="8,0"
+                                      FontSize="12"
+                                      BorderThickness="0"
+                                      Background="Transparent"
+                                      VerticalContentAlignment="Center">
+                                <ComboBoxItem Content="Software"/>
+                                <ComboBoxItem Content="Hardware"/>
+                            </ComboBox>
+                        </Border>
+
+                        <!-- Capture Width & Height -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Width:" 
+                                           Foreground="#8E8E93" 
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Margin="0,0,0,4"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding CaptureWidth, Mode=TwoWay}" 
+                                             Padding="8,0"
+                                             FontSize="12"
+                                             BorderThickness="0"
+                                             Background="Transparent"
+                                             VerticalContentAlignment="Center"
+                                             materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Height:" 
+                                           Foreground="#8E8E93" 
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           Margin="0,0,0,4"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding CaptureHeight, Mode=TwoWay}" 
+                                             Padding="8,0"
+                                             FontSize="12"
+                                             BorderThickness="0"
+                                             Background="Transparent"
+                                             VerticalContentAlignment="Center"
+                                             materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Save & Cancel Buttons -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Button Grid.Column="0"
+                                    Content="Cancel" 
+                                    Command="{Binding CancelSettingsCommand}"
+                                    Height="36" 
+                                    Background="#F2F2F7" 
+                                    Foreground="#FF3B30" 
+                                    BorderThickness="0"
+                                    FontWeight="SemiBold"
+                                    Cursor="Hand">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            CornerRadius="18" 
+                                                            Padding="8,0">
+                                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                                          VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#E5E5EA"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            
+                            <Button Grid.Column="2"
+                                    Content="Save" 
+                                    Command="{Binding ToggleSettingsCommand}"
+                                    Height="36" 
+                                    Background="#34C759" 
+                                    Foreground="White" 
+                                    BorderThickness="0"
+                                    FontWeight="SemiBold"
+                                    Cursor="Hand">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                                            CornerRadius="18" 
+                                                            Padding="8,0">
+                                                        <ContentPresenter HorizontalAlignment="Center" 
+                                                                          VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#2EB852"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Runtime Log (in-memory) -->
+                    <Border Grid.Row="2"
+                            Margin="0,12,0,0"
+                            Background="#F8F9FA"
+                            BorderBrush="#E5E5EA"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="8"
+                            MinHeight="150">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Text="Runtime Log"
+                                       FontWeight="SemiBold"
+                                       Foreground="#1C1C1E"
+                                       FontSize="13"
+                                       Margin="0,0,0,6"/>
+
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding Logs}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                 <ListBox.ItemContainerStyle>
+                                     <Style TargetType="ListBoxItem">
+                                         <Setter Property="Padding" Value="0"/>
+                                         <Setter Property="Margin" Value="0,0,0,4"/>
+                                         <Setter Property="Background" Value="Transparent"/>
+                                         <Setter Property="BorderThickness" Value="0"/>
+                                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                     </Style>
+                                 </ListBox.ItemContainerStyle>
+                                 <ListBox.ItemTemplate>
+                                     <DataTemplate>
+                                         <TextBlock Text="{Binding}"
+                                                    FontFamily="Consolas"
+                                                    FontSize="10"
+                                                    Foreground="#8E8E93"
+                                                    TextWrapping="Wrap"/>
+                                     </DataTemplate>
+                                 </ListBox.ItemTemplate>
+                             </ListBox>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

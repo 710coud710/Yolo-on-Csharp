@@ -1,0 +1,28 @@
+using System;
+using System.Collections.Generic;
+
+namespace Client.Models
+{
+    public class DetectionResult
+    {
+        public int Count { get; set; }
+        public DateTime Timestamp { get; set; }
+        public string? ImagePath { get; set; }
+        public bool IsSuccess { get; set; }
+        public string? ErrorMessage { get; set; }
+        public List<DetectedObject> DetectedObjects { get; set; } = new();
+        public double ProcessingTimeMs { get; set; }
+        public string ModelPath { get; set; } = string.Empty;
+    }
+
+    public class DetectedObject
+    {
+        public string ClassName { get; set; } = string.Empty;
+        public int ClassId { get; set; }
+        public float Confidence { get; set; }
+        public float X { get; set; }
+        public float Y { get; set; }
+        public float Width { get; set; }
+        public float Height { get; set; }
+    }
+}
