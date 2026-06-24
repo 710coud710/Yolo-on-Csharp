@@ -191,6 +191,8 @@
                 <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
             </Border.Effect>
             <Grid>
+                <Border x:Name="TableMask" Background="White" CornerRadius="16" IsHitTestVisible="False"/>
+
                 <!-- Loading Indicator -->
                 <StackPanel VerticalAlignment="Center" 
                             HorizontalAlignment="Center">
@@ -229,6 +231,9 @@
                           Background="White"
                           RowBackground="White"
                           FontSize="13">
+                    <DataGrid.OpacityMask>
+                        <VisualBrush Visual="{Binding ElementName=TableMask}"/>
+                    </DataGrid.OpacityMask>
                     <DataGrid.Resources>
                         <Style TargetType="TextBlock">
                             <Setter Property="VerticalAlignment" Value="Center"/>

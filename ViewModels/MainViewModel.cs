@@ -74,10 +74,16 @@ namespace Client.ViewModels
             }
         }
 
-        public string AppVersion => Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+        public string AppVersion => Assembly
+            .GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion
+            ?.Split('+')[0] 
+            ?? "1.0.0.0";
         public string AppVersionText => $"Version {AppVersion}";
         public string WindowTitle => $"Vision Counter v{AppVersion}";
-
+        public string Copyright =>
+            $"© {DateTime.Now.Year} - Innovation Team {Environment.NewLine} All rights reserved.";
         public DashboardViewModel DashboardViewModel { get; }
         public ItemsViewModel ItemsViewModel { get; }
         public ModelViewModel ModelViewModel { get; }

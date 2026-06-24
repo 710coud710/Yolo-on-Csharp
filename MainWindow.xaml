@@ -336,17 +336,17 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="{Binding AppVersionText}" 
+                         <!--<TextBlock Text="{Binding AppVersionText}" 
                                    FontSize="13" 
                                    Foreground="#8E8E93" 
-                                   HorizontalAlignment="Center"/>
-                        <TextBlock Text="©2026 - Innovation Team&#x0a; All rights reserved" 
+                                   HorizontalAlignment="Center"/>--> 
+                        <TextBlock Text="{Binding Copyright}" 
                                    FontSize="13" 
                                    TextWrapping="Wrap"
-                                   Foreground="#8E8E93" 
+                                   Foreground="#8E8E93"  
                                    HorizontalAlignment="Stretch" 
                                    TextAlignment="Center"
-                                   Margin="0,4,0,0"/>
+                                   Margin="0,0,0,0"/>
                     </StackPanel>
                 </Border>
             </Grid>

@@ -197,6 +197,7 @@
                 <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
             </Border.Effect>
             <Grid>
+                <Border x:Name="TableMask" Background="White" CornerRadius="16" IsHitTestVisible="False"/>
                 <DataGrid ItemsSource="{Binding Items}"
                           SelectedItem="{Binding SelectedRow, Mode=TwoWay}"
                           AutoGenerateColumns="False"
@@ -209,6 +210,9 @@
                           Background="White"
                           BorderThickness="0"
                           RowHeight="50">
+                    <DataGrid.OpacityMask>
+                        <VisualBrush Visual="{Binding ElementName=TableMask}"/>
+                    </DataGrid.OpacityMask>
                     <DataGrid.Columns>
                         <!-- Index Column (#) -->
                         <DataGridTextColumn Header="#" 
