@@ -109,6 +109,18 @@ namespace Client.ViewModels
             set => SetProperty(ref _captureHeight, value);
         }
 
+        // ====== TEST IMAGE MODE CODE ======
+        private byte[]? _testSelectedImageBytes;
+        private bool _hasTestImage;
+        public bool HasTestImage
+        {
+            get => _hasTestImage;
+            set => SetProperty(ref _hasTestImage, value);
+        }
+        public ICommand SelectTestImageCommand { get; }
+        public ICommand ClearTestImageCommand { get; }
+        // ==================================
+
         public ObservableCollection<string> Logs => _logService.Entries;
 
         public ICommand ConnectCameraCommand { get; }
@@ -136,7 +148,11 @@ namespace Client.ViewModels
 
             ConnectCameraCommand = new RelayCommand(async _ => await ConnectCamera(), _ => !IsCameraConnected && !IsSettingsMode);
             DisconnectCameraCommand = new RelayCommand(async _ => await DisconnectCamera(), _ => IsCameraConnected && !IsSettingsMode);
-            StartCommand = new RelayCommand(async _ => await Start(), _ => IsCameraConnected && !IsDetecting && !IsSettingsMode);
+            // ====== TEST IMAGE MODE CODE ======
+            StartCommand = new RelayCommand(async _ => await Start(), _ => (IsCameraConnected || HasTestImage) && !IsDetecting && !IsSettingsMode);
+            SelectTestImageCommand = new RelayCommand(_ => SelectTestImage());
+            ClearTestImageCommand = new RelayCommand(_ => ClearTestImage());
+            // ==================================
             ToggleSettingsCommand = new RelayCommand(_ => ToggleSettings());
             CancelSettingsCommand = new RelayCommand(_ => CancelSettings());
 
@@ -201,7 +217,9 @@ namespace Client.ViewModels
 
             try
             {
-                byte[]? imageData = await _cameraService.CaptureAsync();
+                // ====== TEST IMAGE MODE CODE ======
+                byte[]? imageData = _testSelectedImageBytes ?? await _cameraService.CaptureAsync();
+                // ==================================
                 if (imageData == null)
                 {
                     StatusMessage = "Failed to capture image";
@@ -306,6 +324,9 @@ namespace Client.ViewModels
         private void OnFrameCaptured(object? sender, BitmapSource frame)
         {
             _liveFrame = frame;
+            // ====== TEST IMAGE MODE CODE ======
+            if (HasTestImage) return;
+            // ==================================
             if (!IsShowingResult)
             {
                 DisplayFrame = frame;
@@ -370,6 +391,52 @@ namespace Client.ViewModels
             StatusMessage = "Editing cancelled";
             _logService.LogInfo("Cancelled camera settings editing");
         }
+
+        // ====== TEST IMAGE MODE CODE ======
+        private void SelectTestImage()
+        {
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Image Files (*.jpg;*.jpeg;*.png;*.bmp)|*.jpg;*.jpeg;*.png;*.bmp|All Files (*.*)|*.*",
+                Title = "Select Test Image"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var bytes = System.IO.File.ReadAllBytes(openFileDialog.FileName);
+                    var bitmap = ByteArrayToBitmapSource(bytes);
+                    if (bitmap != null)
+                    {
+                        _testSelectedImageBytes = bytes;
+                        HasTestImage = true;
+                        DisplayFrame = bitmap;
+                        StatusMessage = $"Loaded test image: {System.IO.Path.GetFileName(openFileDialog.FileName)}";
+                        _logService.LogInfo($"Loaded test image from file: {openFileDialog.FileName}");
+                    }
+                    else
+                    {
+                        StatusMessage = "Failed to load the selected image file.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    StatusMessage = $"Error loading test image: {ex.Message}";
+                    _logService.LogError($"Error loading test image: {ex.Message}");
+                }
+            }
+        }
+
+        private void ClearTestImage()
+        {
+            _testSelectedImageBytes = null;
+            HasTestImage = false;
+            DisplayFrame = _liveFrame; // Revert to live frame if available
+            StatusMessage = "Cleared test image";
+            _logService.LogInfo("Cleared test image");
+        }
+        // ==================================
 
         public void SetNavigateToSettings(Action navigateToSettings)
         {
