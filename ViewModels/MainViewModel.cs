@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -72,6 +73,10 @@ namespace Client.ViewModels
                 }
             }
         }
+
+        public string AppVersion => Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0.0";
+        public string AppVersionText => $"Version {AppVersion}";
+        public string WindowTitle => $"Vision Counter v{AppVersion}";
 
         public DashboardViewModel DashboardViewModel { get; }
         public ItemsViewModel ItemsViewModel { get; }

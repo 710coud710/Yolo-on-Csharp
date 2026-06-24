@@ -7,7 +7,7 @@
         xmlns:converters="clr-namespace:Client.Converters"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
-        Title="Vision Counter v1.0.0.0" 
+        Title="{Binding WindowTitle}" 
         Icon="pack://application:,,,/assets/icon.ico"
         Height="768" 
         Width="1366"
@@ -336,7 +336,7 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <TextBlock Text="Version 1.0.0.0" 
+                        <TextBlock Text="{Binding AppVersionText}" 
                                    FontSize="13" 
                                    Foreground="#8E8E93" 
                                    HorizontalAlignment="Center"/>
