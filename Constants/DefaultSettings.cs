@@ -17,6 +17,7 @@ namespace Client.Constants
         public const string CameraTriggerMode = "Software";
         public const int CameraCaptureWidth = 1920;
         public const int CameraCaptureHeight = 1080;
+        public const int CameraFps = 30;
 
         // Image Settings
         public const bool ImageAutoSave = true;

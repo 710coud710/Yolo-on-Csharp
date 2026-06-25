@@ -429,6 +429,7 @@ namespace Client.Services
                 new Scalar(0, 255, 0)    // Xanh lá
             };
 
+            int count = 1;
             foreach (var obj in detectedObjects)
             {
                 var color = colors[obj.ClassId % colors.Length];
@@ -437,8 +438,10 @@ namespace Client.Services
                 // Vẽ hình chữ nhật
                 Cv2.Rectangle(src, rect, color, 3);
 
-                // Viết nhãn lớp và độ tin cậy
-                string label = $"{obj.ClassName} {obj.Confidence:P0}";
+                // Viết số thứ tự đếm thay vì nhãn lớp và độ tin cậy
+                string label = count.ToString();
+                count++;
+
                 int baseLine;
                 var labelSize = Cv2.GetTextSize(label, HersheyFonts.HersheySimplex, 0.6, 1, out baseLine);
                 

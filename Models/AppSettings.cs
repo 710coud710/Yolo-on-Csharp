@@ -58,11 +58,15 @@ namespace Client.Models
         public string TriggerMode { get; set; }
         public int CaptureWidth { get; set; }
         public int CaptureHeight { get; set; }
+        public int Fps { get; set; }
         
         public CameraSettings()
         {
             IpAddress = string.Empty;
             TriggerMode = string.Empty;
+            CaptureWidth = 1920;
+            CaptureHeight = 1080;
+            Fps = 30;
         }
     }
 

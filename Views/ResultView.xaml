@@ -27,13 +27,76 @@
             <Border.Effect>
                 <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
             </Border.Effect>
-            <Grid>
-                <Viewbox Stretch="Uniform" Margin="8">
-                    <Image Source="{Binding OutputImage}"
+            <Grid ClipToBounds="True">
+                <!-- Zoomable Image Container -->
+                <Grid x:Name="ImageContainer" Background="#0A0A0C" ClipToBounds="True" Margin="8"
+                      MouseWheel="ImageContainer_MouseWheel"
+                      MouseLeftButtonDown="ImageContainer_MouseLeftButtonDown"
+                      MouseLeftButtonUp="ImageContainer_MouseLeftButtonUp"
+                      MouseMove="ImageContainer_MouseMove">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding OutputImage}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+
+                    <Image x:Name="ResultImage"
+                           Source="{Binding OutputImage}"
                            Stretch="Uniform"
                            HorizontalAlignment="Center"
-                           VerticalAlignment="Center"/>
-                </Viewbox>
+                           VerticalAlignment="Center"
+                           RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform x:Name="ImageScale" ScaleX="1" ScaleY="1"/>
+                                <TranslateTransform x:Name="ImageTranslate" X="0" Y="0"/>
+                            </TransformGroup>
+                        </Image.RenderTransform>
+                    </Image>
+
+                    <!-- Zoom Control Toolbar -->
+                    <Border Background="#A0000000"
+                            CornerRadius="20"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Margin="16"
+                            Padding="8,4">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="BtnZoomIn" Click="BtnZoomIn_Click" ToolTip="Zoom In" Width="32" Height="32" Background="Transparent" BorderThickness="0" Cursor="Hand">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="16">
+                                            <materialDesign:PackIcon Kind="Plus" Foreground="White" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            <Button x:Name="BtnZoomOut" Click="BtnZoomOut_Click" ToolTip="Zoom Out" Width="32" Height="32" Background="Transparent" BorderThickness="0" Cursor="Hand" Margin="4,0">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="16">
+                                            <materialDesign:PackIcon Kind="Minus" Foreground="White" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            <Button x:Name="BtnZoomReset" Click="BtnZoomReset_Click" ToolTip="Reset Zoom" Width="32" Height="32" Background="Transparent" BorderThickness="0" Cursor="Hand">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="16">
+                                            <materialDesign:PackIcon Kind="ArrowExpandAll" Foreground="White" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                            <TextBlock Text="Scroll to Zoom | Drag to Pan" Foreground="#CCCCCC" FontSize="11" VerticalAlignment="Center" Margin="12,0,4,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
 
                 <!-- Loading overlay while downloading output image -->
                 <Border Background="#80000000"

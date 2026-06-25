@@ -1,5 +1,7 @@
 using System;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Windows.Input;
 using Client.Commands;
 using Client.Constants;
@@ -12,6 +14,7 @@ namespace Client.ViewModels
     {
         private readonly ISettingsService _settingsService;
         private readonly ModelManagerService _modelManager;
+        private readonly ICameraService _cameraService;
         
         private string _modelsDirectory = "Models";
         private double _confidenceThreshold = 0.25;
@@ -21,6 +24,7 @@ namespace Client.ViewModels
         private string _cameraIp = string.Empty;
         private int _captureWidth = 1920;
         private int _captureHeight = 1080;
+        private int _fps = 30;
         private string _triggerMode = "Software";
         
         private bool _autoSave = true;
@@ -89,6 +93,34 @@ namespace Client.ViewModels
         {
             get => _captureHeight;
             set => SetProperty(ref _captureHeight, value);
+        }
+
+        public int Fps
+        {
+            get => _fps;
+            set => SetProperty(ref _fps, value);
+        }
+
+        private ObservableCollection<CameraResolutionOption> _supportedResolutions = new();
+        public ObservableCollection<CameraResolutionOption> SupportedResolutions
+        {
+            get => _supportedResolutions;
+            set => SetProperty(ref _supportedResolutions, value);
+        }
+
+        private CameraResolutionOption? _selectedResolution;
+        public CameraResolutionOption? SelectedResolution
+        {
+            get => _selectedResolution;
+            set
+            {
+                if (SetProperty(ref _selectedResolution, value) && value != null)
+                {
+                    CaptureWidth = value.Width;
+                    CaptureHeight = value.Height;
+                    Fps = value.Fps;
+                }
+            }
         }
 
         public string TriggerMode
@@ -195,10 +227,11 @@ namespace Client.ViewModels
         public ICommand UnlockCommand { get; }
         public ICommand ToggleChangePasswordCommand { get; }
 
-        public SettingsViewModel(ISettingsService settingsService, ModelManagerService modelManager)
+        public SettingsViewModel(ISettingsService settingsService, ModelManagerService modelManager, ICameraService cameraService)
         {
             _settingsService = settingsService;
             _modelManager = modelManager;
+            _cameraService = cameraService;
             
             LoadSettings();
 
@@ -228,7 +261,16 @@ namespace Client.ViewModels
                 CameraIp = settings.Camera.IpAddress;
                 CaptureWidth = settings.Camera.CaptureWidth;
                 CaptureHeight = settings.Camera.CaptureHeight;
+                Fps = settings.Camera.Fps;
                 TriggerMode = settings.Camera.TriggerMode;
+
+                if (_cameraService != null)
+                {
+                    SupportedResolutions = new ObservableCollection<CameraResolutionOption>(_cameraService.GetSupportedResolutions());
+                    SelectedResolution = SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight && r.Fps == Fps)
+                                         ?? SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight)
+                                         ?? SupportedResolutions.FirstOrDefault();
+                }
 
                 AutoSave = settings.Image.AutoSave;
                 SaveDirectory = settings.Image.SaveDirectory;
@@ -318,7 +360,8 @@ namespace Client.ViewModels
                         IpAddress = CameraIp,
                         TriggerMode = TriggerMode,
                         CaptureWidth = CaptureWidth,
-                        CaptureHeight = CaptureHeight
+                        CaptureHeight = CaptureHeight,
+                        Fps = Fps
                     },
                     Image = new ImageSettings
                     {
@@ -365,7 +408,15 @@ namespace Client.ViewModels
             CameraIp = DefaultSettings.CameraIpAddress;
             CaptureWidth = DefaultSettings.CameraCaptureWidth;
             CaptureHeight = DefaultSettings.CameraCaptureHeight;
+            Fps = DefaultSettings.CameraFps;
             TriggerMode = DefaultSettings.CameraTriggerMode;
+
+            if (SupportedResolutions != null)
+            {
+                SelectedResolution = SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight && r.Fps == Fps)
+                                     ?? SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight)
+                                     ?? SupportedResolutions.FirstOrDefault();
+            }
 
             AutoSave = DefaultSettings.ImageAutoSave;
             SaveDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DefaultSettings.ImageSaveDirectoryName);

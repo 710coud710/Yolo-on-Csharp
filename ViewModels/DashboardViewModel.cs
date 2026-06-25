@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Client.Commands;
@@ -109,6 +110,35 @@ namespace Client.ViewModels
             set => SetProperty(ref _captureHeight, value);
         }
 
+        private int _fps = 30;
+        public int Fps
+        {
+            get => _fps;
+            set => SetProperty(ref _fps, value);
+        }
+
+        private ObservableCollection<CameraResolutionOption> _supportedResolutions = new();
+        public ObservableCollection<CameraResolutionOption> SupportedResolutions
+        {
+            get => _supportedResolutions;
+            set => SetProperty(ref _supportedResolutions, value);
+        }
+
+        private CameraResolutionOption? _selectedResolution;
+        public CameraResolutionOption? SelectedResolution
+        {
+            get => _selectedResolution;
+            set
+            {
+                if (SetProperty(ref _selectedResolution, value) && value != null)
+                {
+                    CaptureWidth = value.Width;
+                    CaptureHeight = value.Height;
+                    Fps = value.Fps;
+                }
+            }
+        }
+
         // ====== TEST IMAGE MODE CODE ======
         private byte[]? _testSelectedImageBytes;
         private bool _hasTestImage;
@@ -129,14 +159,16 @@ namespace Client.ViewModels
         public ICommand ToggleSettingsCommand { get; }
         public ICommand CancelSettingsCommand { get; }
 
-        public DashboardViewModel(IYoloDetector detector, ModelManagerService modelManager, ISettingsService settingsService)
+        public DashboardViewModel(IYoloDetector detector, ModelManagerService modelManager, ISettingsService settingsService, ICameraService cameraService)
         {
             _logService = InMemoryLogService.Instance;
-            _cameraService = new CameraService();
+            _cameraService = cameraService;
             _cameraService.FrameCaptured += OnFrameCaptured;
             _detector = detector;
             _modelManager = modelManager;
             _settingsService = settingsService;
+
+            SupportedResolutions = new ObservableCollection<CameraResolutionOption>(_cameraService.GetSupportedResolutions());
             
             _cameraInfo = new CameraInfo();
             _statusMessage = "Ready";
@@ -164,7 +196,8 @@ namespace Client.ViewModels
             StatusMessage = "Connecting to camera...";
             _logService.LogInfo("Connecting to camera...");
             
-            bool success = await _cameraService.ConnectAsync();
+            var settings = _settingsService.LoadSettings();
+            bool success = await _cameraService.ConnectAsync(settings.Camera.CaptureWidth, settings.Camera.CaptureHeight, settings.Camera.Fps);
             
             if (success)
             {
@@ -347,6 +380,12 @@ namespace Client.ViewModels
                     TriggerMode = settings.Camera.TriggerMode;
                     CaptureWidth = settings.Camera.CaptureWidth;
                     CaptureHeight = settings.Camera.CaptureHeight;
+                    Fps = settings.Camera.Fps;
+
+                    SelectedResolution = SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight && r.Fps == Fps)
+                                         ?? SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight)
+                                         ?? SupportedResolutions.FirstOrDefault();
+
                     StatusMessage = "Editing camera settings";
                     _logService.LogInfo("Entered Camera Settings mode");
                 }
@@ -371,6 +410,7 @@ namespace Client.ViewModels
                     settings.Camera.TriggerMode = TriggerMode;
                     settings.Camera.CaptureWidth = CaptureWidth;
                     settings.Camera.CaptureHeight = CaptureHeight;
+                    settings.Camera.Fps = Fps;
 
                     _settingsService.SaveSettings(settings);
                     StatusMessage = "Camera settings saved successfully!";

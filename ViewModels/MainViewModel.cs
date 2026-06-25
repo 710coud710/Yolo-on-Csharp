@@ -123,12 +123,13 @@ namespace Client.ViewModels
             var initialModel = _modelManager.GetActiveModelPath();
             _detector.LoadModel(initialModel);
 
-            DashboardViewModel = new DashboardViewModel(_detector, _modelManager, _settingsService);
+            var cameraService = new CameraService();
+            DashboardViewModel = new DashboardViewModel(_detector, _modelManager, _settingsService, cameraService);
             ItemsViewModel = new ItemsViewModel(this, _settingsService);
             ResultViewModel = new ResultViewModel();
             ModelViewModel = new ModelViewModel(_detector, _modelManager, _settingsService);
             HistoryViewModel = new HistoryViewModel();
-            SettingsViewModel = new SettingsViewModel(_settingsService, _modelManager);
+            SettingsViewModel = new SettingsViewModel(_settingsService, _modelManager, cameraService);
 
             // Khởi chạy tiến trình khởi tạo/tạo schema database ngầm để tránh block UI thread
             Task.Run(async () =>

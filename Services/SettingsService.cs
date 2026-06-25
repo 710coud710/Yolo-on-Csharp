@@ -108,7 +108,8 @@ namespace Client.Services
                     IpAddress = DefaultSettings.CameraIpAddress,
                     TriggerMode = DefaultSettings.CameraTriggerMode,
                     CaptureWidth = DefaultSettings.CameraCaptureWidth,
-                    CaptureHeight = DefaultSettings.CameraCaptureHeight
+                    CaptureHeight = DefaultSettings.CameraCaptureHeight,
+                    Fps = DefaultSettings.CameraFps
                 },
                 Image = new ImageSettings
                 {

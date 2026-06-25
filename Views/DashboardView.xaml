@@ -507,48 +507,22 @@
                             </ComboBox>
                         </Border>
 
-                        <!-- Capture Width & Height -->
-                        <Grid Margin="0,0,0,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="8"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Width:" 
-                                           Foreground="#8E8E93" 
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Margin="0,0,0,4"/>
-                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
-                                    <TextBox Text="{Binding CaptureWidth, Mode=TwoWay}" 
-                                             Padding="8,0"
-                                             FontSize="12"
-                                             BorderThickness="0"
-                                             Background="Transparent"
-                                             VerticalContentAlignment="Center"
-                                             materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
-                                </Border>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Height:" 
-                                           Foreground="#8E8E93" 
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           Margin="0,0,0,4"/>
-                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
-                                    <TextBox Text="{Binding CaptureHeight, Mode=TwoWay}" 
-                                             Padding="8,0"
-                                             FontSize="12"
-                                             BorderThickness="0"
-                                             Background="Transparent"
-                                             VerticalContentAlignment="Center"
-                                             materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
-                                </Border>
-                            </StackPanel>
-                        </Grid>
+                        <!-- Resolution & FPS Selection -->
+                        <TextBlock Text="Resolution &amp; FPS:" 
+                                   Foreground="#8E8E93" 
+                                   FontSize="12"
+                                   FontWeight="Medium"
+                                   Margin="0,0,0,4"/>
+                        <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32" Margin="0,0,0,16">
+                            <ComboBox ItemsSource="{Binding SupportedResolutions}"
+                                      SelectedItem="{Binding SelectedResolution, Mode=TwoWay}"
+                                      DisplayMemberPath="DisplayName"
+                                      Padding="8,0"
+                                      FontSize="12"
+                                      BorderThickness="0"
+                                      Background="Transparent"
+                                      VerticalContentAlignment="Center"/>
+                        </Border>
 
                         <!-- Save & Cancel Buttons -->
                         <Grid>
