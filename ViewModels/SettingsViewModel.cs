@@ -25,6 +25,7 @@ namespace Client.ViewModels
         private int _captureWidth = 1920;
         private int _captureHeight = 1080;
         private int _fps = 30;
+        private bool _testMode;
         private string _triggerMode = "Software";
         
         private bool _autoSave = true;
@@ -127,6 +128,12 @@ namespace Client.ViewModels
         {
             get => _triggerMode;
             set => SetProperty(ref _triggerMode, value);
+        }
+
+        public bool TestMode
+        {
+            get => _testMode;
+            set => SetProperty(ref _testMode, value);
         }
 
         public bool AutoSave
@@ -262,6 +269,7 @@ namespace Client.ViewModels
                 CaptureWidth = settings.Camera.CaptureWidth;
                 CaptureHeight = settings.Camera.CaptureHeight;
                 Fps = settings.Camera.Fps;
+                TestMode = settings.Camera.TestMode;
                 TriggerMode = settings.Camera.TriggerMode;
 
                 if (_cameraService != null)
@@ -361,7 +369,8 @@ namespace Client.ViewModels
                         TriggerMode = TriggerMode,
                         CaptureWidth = CaptureWidth,
                         CaptureHeight = CaptureHeight,
-                        Fps = Fps
+                        Fps = Fps,
+                        TestMode = TestMode
                     },
                     Image = new ImageSettings
                     {
@@ -409,6 +418,7 @@ namespace Client.ViewModels
             CaptureWidth = DefaultSettings.CameraCaptureWidth;
             CaptureHeight = DefaultSettings.CameraCaptureHeight;
             Fps = DefaultSettings.CameraFps;
+            TestMode = DefaultSettings.CameraTestMode;
             TriggerMode = DefaultSettings.CameraTriggerMode;
 
             if (SupportedResolutions != null)

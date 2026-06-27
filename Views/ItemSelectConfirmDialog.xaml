@@ -32,7 +32,8 @@
                                          Foreground="#007AFF" 
                                          HorizontalAlignment="Center"
                                          Margin="0,0,0,12"/>
-                <TextBlock Text="Confirm Selection" 
+                <TextBlock x:Name="TxtTitle"
+                           Text="Confirm Selection" 
                            FontSize="18" 
                            FontWeight="Bold" 
                            Foreground="#1C1C1E" 

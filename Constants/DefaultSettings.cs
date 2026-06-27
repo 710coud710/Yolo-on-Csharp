@@ -18,6 +18,7 @@ namespace Client.Constants
         public const int CameraCaptureWidth = 1920;
         public const int CameraCaptureHeight = 1080;
         public const int CameraFps = 30;
+        public const bool CameraTestMode = false;
 
         // Image Settings
         public const bool ImageAutoSave = true;

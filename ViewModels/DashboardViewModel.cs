@@ -139,6 +139,13 @@ namespace Client.ViewModels
             }
         }
 
+        private bool _testMode;
+        public bool TestMode
+        {
+            get => _testMode;
+            set => SetProperty(ref _testMode, value);
+        }
+
         // ====== TEST IMAGE MODE CODE ======
         private byte[]? _testSelectedImageBytes;
         private bool _hasTestImage;
@@ -181,14 +188,40 @@ namespace Client.ViewModels
             ConnectCameraCommand = new RelayCommand(async _ => await ConnectCamera(), _ => !IsCameraConnected && !IsSettingsMode);
             DisconnectCameraCommand = new RelayCommand(async _ => await DisconnectCamera(), _ => IsCameraConnected && !IsSettingsMode);
             // ====== TEST IMAGE MODE CODE ======
-            StartCommand = new RelayCommand(async _ => await Start(), _ => (IsCameraConnected || HasTestImage) && !IsDetecting && !IsSettingsMode);
+            StartCommand = new RelayCommand(async _ => await Start(), _ => (IsCameraConnected || (TestMode && HasTestImage)) && !IsDetecting && !IsSettingsMode);
             SelectTestImageCommand = new RelayCommand(_ => SelectTestImage());
             ClearTestImageCommand = new RelayCommand(_ => ClearTestImage());
             // ==================================
             ToggleSettingsCommand = new RelayCommand(_ => ToggleSettings());
             CancelSettingsCommand = new RelayCommand(_ => CancelSettings());
 
+            LoadSettings();
             _logService.LogInfo("Dashboard started");
+        }
+
+        public void LoadSettings()
+        {
+            try
+            {
+                var settings = _settingsService.LoadSettings();
+                CameraIp = settings.Camera.IpAddress;
+                TriggerMode = settings.Camera.TriggerMode;
+                CaptureWidth = settings.Camera.CaptureWidth;
+                CaptureHeight = settings.Camera.CaptureHeight;
+                Fps = settings.Camera.Fps;
+                TestMode = settings.Camera.TestMode;
+                
+                if (SupportedResolutions != null)
+                {
+                    SelectedResolution = SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight && r.Fps == Fps)
+                                         ?? SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight)
+                                         ?? SupportedResolutions.FirstOrDefault();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logService.LogError($"Failed to load settings in Dashboard: {ex.Message}");
+            }
         }
 
         private async Task ConnectCamera()
@@ -251,7 +284,7 @@ namespace Client.ViewModels
             try
             {
                 // ====== TEST IMAGE MODE CODE ======
-                byte[]? imageData = _testSelectedImageBytes ?? await _cameraService.CaptureAsync();
+                byte[]? imageData = (TestMode && _testSelectedImageBytes != null) ? _testSelectedImageBytes : await _cameraService.CaptureAsync();
                 // ==================================
                 if (imageData == null)
                 {
@@ -266,7 +299,7 @@ namespace Client.ViewModels
                 int targetClassCode = SelectedItem.ClassCode;
 
                 StatusMessage = "Running local AI inference...";
-                _logService.LogInfo($"Inference on model: {System.IO.Path.GetFileName(_detector.CurrentModelPath)} targetClass={targetClassCode} conf={confThreshold}");
+                _logService.LogInfo($"Inference on model: {System.IO.Path.GetFileName(_detector.CurrentModelPath)} targetClass={targetClassCode} conf={confThreshold} iou={nmsThreshold}");
 
                 // Chạy AI local trên luồng phụ để tránh block UI
                 var localResult = await Task.Run(() => _detector.Detect(imageData, confThreshold, nmsThreshold, targetClassCode));
@@ -375,17 +408,7 @@ namespace Client.ViewModels
                 StatusMessage = "Loading camera settings...";
                 try
                 {
-                    var settings = _settingsService.LoadSettings();
-                    CameraIp = settings.Camera.IpAddress;
-                    TriggerMode = settings.Camera.TriggerMode;
-                    CaptureWidth = settings.Camera.CaptureWidth;
-                    CaptureHeight = settings.Camera.CaptureHeight;
-                    Fps = settings.Camera.Fps;
-
-                    SelectedResolution = SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight && r.Fps == Fps)
-                                         ?? SupportedResolutions.FirstOrDefault(r => r.Width == CaptureWidth && r.Height == CaptureHeight)
-                                         ?? SupportedResolutions.FirstOrDefault();
-
+                    LoadSettings();
                     StatusMessage = "Editing camera settings";
                     _logService.LogInfo("Entered Camera Settings mode");
                 }
@@ -411,6 +434,7 @@ namespace Client.ViewModels
                     settings.Camera.CaptureWidth = CaptureWidth;
                     settings.Camera.CaptureHeight = CaptureHeight;
                     settings.Camera.Fps = Fps;
+                    settings.Camera.TestMode = TestMode;
 
                     _settingsService.SaveSettings(settings);
                     StatusMessage = "Camera settings saved successfully!";

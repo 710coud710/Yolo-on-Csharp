@@ -290,7 +290,8 @@
 
                         <!-- ====== TEST IMAGE MODE CODE ====== -->
                         <!-- Select/Clear Test Image Buttons -->
-                        <Border BorderBrush="#E5E5EA" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,16" Background="#FAFAFA">
+                        <Border BorderBrush="#E5E5EA" BorderThickness="1" CornerRadius="12" Padding="12" Margin="0,0,0,16" Background="#FAFAFA"
+                                Visibility="{Binding TestMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <StackPanel>
                                 <TextBlock Text="TEST / SIMULATION MODE" 
                                            FontWeight="Bold" 

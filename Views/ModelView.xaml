@@ -16,16 +16,9 @@
 
         <!-- Header Controls -->
         <Grid Grid.Row="0" Margin="0,0,0,16">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <StackPanel Grid.Column="0"
-                        Orientation="Horizontal"
+            <StackPanel Orientation="Horizontal"
                         VerticalAlignment="Center"
-                        HorizontalAlignment="Right">
+                        HorizontalAlignment="Left">
                 <!-- Capsule Search Box -->
                 <Border Background="#E5E5EA"
                         CornerRadius="10"
@@ -138,47 +131,6 @@
                     </Button.Style>
                 </Button>
             </StackPanel>
-
-            <!-- Save Selection -->
-            <StackPanel Grid.Column="2"
-                        Orientation="Horizontal"
-                        VerticalAlignment="Center"
-                        HorizontalAlignment="Right">
-                <Button Command="{Binding SaveSelectedClassesCommand}"
-                        Height="40" 
-                        Width="150"
-                        Background="#34C759" 
-                        Foreground="White" 
-                        BorderThickness="0"
-                        FontWeight="SemiBold"
-                        Cursor="Hand">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="ContentSave" Width="18" Height="18" Foreground="White" />
-                        <TextBlock Text="Save Selection" Margin="6,0,0,0" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="20" 
-                                                Padding="12,0">
-                                            <ContentPresenter HorizontalAlignment="Center" 
-                                                              VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#2EB852"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
-            </StackPanel>
         </Grid>
 
         <!-- Classes List Card -->
@@ -253,17 +205,6 @@
                     </DataGrid.Style>
                     
                     <DataGrid.Columns>
-                        <!-- Checkbox Column -->
-                        <DataGridTemplateColumn Header="✓" Width="48" IsReadOnly="False">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-
                         <DataGridTextColumn Header="ID" 
                                              Binding="{Binding Id}" 
                                              Width="60"/>
@@ -284,6 +225,111 @@
                                              Binding="{Binding Description}" 
                                              Width="*"
                                              MinWidth="250"/>
+                                             
+                        <!-- Action Column (Select or Download) -->
+                        <DataGridTemplateColumn Header="Action" Width="120">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <!-- Download Button: Visible when NOT local -->
+                                        <Button Content="Download" 
+                                                Height="28"
+                                                Padding="10,0"
+                                                Background="#E5F1FF"
+                                                Foreground="#007AFF"
+                                                BorderThickness="0"
+                                                FontWeight="SemiBold"
+                                                Cursor="Hand">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="14">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLocal}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+
+                                        <!-- Select Button: Visible when local AND NOT active -->
+                                        <Button Content="Select" 
+                                                Command="{Binding DataContext.SelectModelCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Height="28"
+                                                Padding="10,0"
+                                                Background="#34C759"
+                                                Foreground="White"
+                                                BorderThickness="0"
+                                                FontWeight="SemiBold"
+                                                Cursor="Hand">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="14">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsLocal}" Value="True"/>
+                                                                <Condition Binding="{Binding IsSelected}" Value="False"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+
+                                        <!-- Active Label or Disabled Button: Visible when active (which implies local) -->
+                                        <Button Content="Active" 
+                                                IsEnabled="False"
+                                                Height="28"
+                                                Padding="10,0"
+                                                Background="#E5E5EA"
+                                                Foreground="#8E8E93"
+                                                BorderThickness="0"
+                                                FontWeight="SemiBold">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" CornerRadius="14">
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
 
                     <DataGrid.ColumnHeaderStyle>

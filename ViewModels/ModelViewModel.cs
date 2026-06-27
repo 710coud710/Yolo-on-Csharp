@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Client.Commands;
 using Client.Models;
@@ -11,6 +15,7 @@ namespace Client.ViewModels
         private readonly IYoloDetector _detector;
         private readonly ModelManagerService _modelManager;
         private readonly ISettingsService _settingsService;
+        private readonly ICameraService _cameraService;
         private ObservableCollection<SelectableMaterialClass> _classes;
         private string _statusMessage;
         private bool _isLoading;
@@ -49,22 +54,29 @@ namespace Client.ViewModels
 
         public ICommand LoadClassesCommand { get; }
         public ICommand RefreshClassesCommand { get; }
-        public ICommand SaveSelectedClassesCommand { get; }
+        public ICommand SelectModelCommand { get; }
         public ICommand SearchCommand { get; }
         public ICommand ClearSearchCommand { get; }
 
-        public ModelViewModel(IYoloDetector detector, ModelManagerService modelManager, ISettingsService settingsService)
+        public ModelViewModel(IYoloDetector detector, ModelManagerService modelManager, ISettingsService settingsService, ICameraService cameraService)
         {
             _detector = detector;
             _modelManager = modelManager;
             _settingsService = settingsService;
+            _cameraService = cameraService;
             _classes = new ObservableCollection<SelectableMaterialClass>();
             _statusMessage = "Ready";
             _searchQuery = string.Empty;
 
             LoadClassesCommand = new RelayCommand(async _ => await LoadClasses());
             RefreshClassesCommand = new RelayCommand(async _ => await LoadClasses());
-            SaveSelectedClassesCommand = new RelayCommand(_ => SaveSelectedClasses());
+            SelectModelCommand = new RelayCommand(obj =>
+            {
+                if (obj is SelectableMaterialClass modelClass)
+                {
+                    _ = SelectModelAsync(modelClass);
+                }
+            });
             SearchCommand = new RelayCommand(async _ => await LoadClasses());
             ClearSearchCommand = new RelayCommand(async _ =>
             {
@@ -98,7 +110,16 @@ namespace Client.ViewModels
                         bool isActive = string.Equals(model.Label, activeModelPath, StringComparison.OrdinalIgnoreCase)
                                      || string.Equals(System.IO.Path.Combine(_modelManager.ModelsDir, model.Label), activeModelPath, StringComparison.OrdinalIgnoreCase);
 
-                        items.Add(new SelectableMaterialClass(model, isActive));
+                        bool isLocal = string.Equals(model.Label, "MockMode", StringComparison.OrdinalIgnoreCase);
+                        if (!isLocal)
+                        {
+                            string localPath = System.IO.Path.IsPathRooted(model.Label) 
+                                ? model.Label 
+                                : System.IO.Path.Combine(_modelManager.ModelsDir, model.Label);
+                            isLocal = System.IO.File.Exists(localPath);
+                        }
+
+                        items.Add(new SelectableMaterialClass(model, isActive) { IsLocal = isLocal });
                     }
 
                     // Áp dụng bộ lọc tìm kiếm
@@ -118,21 +139,6 @@ namespace Client.ViewModels
                         Classes.Clear();
                         foreach (var selectableClass in items)
                         {
-                            selectableClass.PropertyChanged += (s, e) =>
-                            {
-                                if (e.PropertyName == nameof(SelectableMaterialClass.IsSelected) && selectableClass.IsSelected)
-                                {
-                                    // Đảm bảo chỉ chọn duy nhất 1 model làm active
-                                    foreach (var other in Classes)
-                                    {
-                                        if (other != selectableClass)
-                                        {
-                                            other.IsSelected = false;
-                                        }
-                                    }
-                                    UpdateSelectedCount();
-                                }
-                            };
                             Classes.Add(selectableClass);
                         }
                         UpdateSelectedCount();
@@ -151,34 +157,86 @@ namespace Client.ViewModels
             }
         }
 
-        private void SaveSelectedClasses()
+        private async Task SelectModelAsync(SelectableMaterialClass modelClass)
         {
+            if (modelClass == null) return;
+
+            // Prompt user about restart requirement
+            bool restartNow = false;
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                var message = $"Changing the active model to '{modelClass.Label}' requires a restart to take effect. Would you like to restart the application now?";
+                var dialog = new Client.Views.ItemSelectConfirmDialog(message, "Restart Required");
+                if (App.Current.MainWindow != null)
+                {
+                    dialog.Owner = App.Current.MainWindow;
+                }
+                restartNow = dialog.ShowDialog() == true;
+            });
+
             try
             {
-                StatusMessage = "Saving selected active model...";
+                StatusMessage = $"Activating model {modelClass.Label}...";
 
-                var selectedModel = Classes.FirstOrDefault(c => c.IsSelected);
-                if (selectedModel == null)
+                // 1. Mark this model as active (IsSelected = true) and others as false on the UI
+                foreach (var item in Classes)
                 {
-                    StatusMessage = "Error: Please select a model first.";
-                    return;
+                    item.IsSelected = (item == modelClass);
                 }
+                UpdateSelectedCount();
 
-                // Cập nhật active.json thông qua ModelManagerService
-                _modelManager.SetActiveModel(selectedModel.MaterialCode, selectedModel.Label);
+                // 2. Set active model config via manager
+                _modelManager.SetActiveModel(modelClass.MaterialCode, modelClass.Label);
 
-                // Cập nhật trạng thái active trong database
-                Task.Run(async () =>
+                // 3. Save to database in background
+                await Task.Run(async () =>
                 {
-                    var dbService = new DatabaseService(_settingsService);
-                    await dbService.SetActiveModelInDbAsync(selectedModel.Id);
+                    try
+                    {
+                        var dbService = new DatabaseService(_settingsService);
+                        await dbService.SetActiveModelInDbAsync(modelClass.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        App.Current.Dispatcher.Invoke(() =>
+                        {
+                            StatusMessage = $"Warning: Saved locally, but failed to update active model in database: {ex.Message}";
+                        });
+                    }
                 });
 
-                StatusMessage = $"Activated model: {selectedModel.Label} successfully!";
+                if (restartNow)
+                {
+                    StatusMessage = "Restarting application...";
+                    App.Current.Dispatcher.Invoke(() =>
+                    {
+                        try
+                        {
+                            var processPath = Environment.ProcessPath;
+                            if (!string.IsNullOrEmpty(processPath))
+                            {
+                                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                                {
+                                    FileName = processPath,
+                                    UseShellExecute = true
+                                });
+                            }
+                            System.Windows.Application.Current.Shutdown();
+                        }
+                        catch (Exception ex)
+                        {
+                            StatusMessage = $"Failed to restart automatically: {ex.Message}. Please restart manually.";
+                        }
+                    });
+                }
+                else
+                {
+                    StatusMessage = $"Activated model: {modelClass.Label} successfully! Please restart the application later to apply changes.";
+                }
             }
             catch (Exception ex)
             {
-                StatusMessage = $"Failed to save model configuration: {ex.Message}";
+                StatusMessage = $"Failed to activate model: {ex.Message}";
             }
         }
 

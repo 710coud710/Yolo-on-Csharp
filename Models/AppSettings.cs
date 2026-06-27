@@ -59,6 +59,7 @@ namespace Client.Models
         public int CaptureWidth { get; set; }
         public int CaptureHeight { get; set; }
         public int Fps { get; set; }
+        public bool TestMode { get; set; }
         
         public CameraSettings()
         {
@@ -67,6 +68,7 @@ namespace Client.Models
             CaptureWidth = 1920;
             CaptureHeight = 1080;
             Fps = 30;
+            TestMode = false;
         }
     }
 

@@ -127,7 +127,7 @@ namespace Client.ViewModels
             DashboardViewModel = new DashboardViewModel(_detector, _modelManager, _settingsService, cameraService);
             ItemsViewModel = new ItemsViewModel(this, _settingsService);
             ResultViewModel = new ResultViewModel();
-            ModelViewModel = new ModelViewModel(_detector, _modelManager, _settingsService);
+            ModelViewModel = new ModelViewModel(_detector, _modelManager, _settingsService, cameraService);
             HistoryViewModel = new HistoryViewModel();
             SettingsViewModel = new SettingsViewModel(_settingsService, _modelManager, cameraService);
 
@@ -199,6 +199,10 @@ namespace Client.ViewModels
             if (section == "Settings")
             {
                 SettingsViewModel.ResetLock();
+            }
+            else if (section == "Dashboard")
+            {
+                DashboardViewModel.LoadSettings();
             }
             else if (section == "Items")
             {

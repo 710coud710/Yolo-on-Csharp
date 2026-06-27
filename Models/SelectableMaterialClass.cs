@@ -5,8 +5,21 @@ namespace Client.Models
 {
     public class SelectableMaterialClass : INotifyPropertyChanged
     {
-        private bool _isSelected;
+        private bool _isLocal = true;
+        public bool IsLocal
+        {
+            get => _isLocal;
+            set
+            {
+                if (_isLocal != value)
+                {
+                    _isLocal = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
+        private bool _isSelected;
         public MaterialClass MaterialClass { get; set; }
 
         public bool IsSelected

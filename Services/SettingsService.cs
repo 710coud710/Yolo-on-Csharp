@@ -109,7 +109,8 @@ namespace Client.Services
                     TriggerMode = DefaultSettings.CameraTriggerMode,
                     CaptureWidth = DefaultSettings.CameraCaptureWidth,
                     CaptureHeight = DefaultSettings.CameraCaptureHeight,
-                    Fps = DefaultSettings.CameraFps
+                    Fps = DefaultSettings.CameraFps,
+                    TestMode = DefaultSettings.CameraTestMode
                 },
                 Image = new ImageSettings
                 {
