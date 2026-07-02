@@ -1,3 +1,7 @@
+using System;
+using System.IO;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
@@ -31,6 +35,14 @@ namespace Client.ViewModels
         private string _triggerMode = "Software";
         private int _captureWidth = 1920;
         private int _captureHeight = 1080;
+        private bool _isStreamingDetectionActive;
+        private int _liveStreamCount;
+        private string _modelProcess = "Capture";
+        private bool _allClass = false;
+        private double _roiX = 0;
+        private double _roiY = 0;
+        private double _roiWidth = 100;
+        private double _roiHeight = 100;
 
         public DbItem? SelectedItem
         {
@@ -59,7 +71,13 @@ namespace Client.ViewModels
         public bool IsCameraConnected
         {
             get => _isCameraConnected;
-            set => SetProperty(ref _isCameraConnected, value);
+            set
+            {
+                if (SetProperty(ref _isCameraConnected, value))
+                {
+                    OnPropertyChanged(nameof(IsRoiOverlayVisible));
+                }
+            }
         }
 
         public BitmapSource? DisplayFrame
@@ -79,6 +97,97 @@ namespace Client.ViewModels
             get => _isDetecting;
             set => SetProperty(ref _isDetecting, value);
         }
+
+        public bool IsStreamingDetectionActive
+        {
+            get => _isStreamingDetectionActive;
+            set
+            {
+                if (SetProperty(ref _isStreamingDetectionActive, value))
+                {
+                    OnPropertyChanged(nameof(IsRoiOverlayVisible));
+                }
+            }
+        }
+
+        public bool IsRoiOverlayVisible => IsCameraConnected && !IsStreamingDetectionActive;
+
+        public int LiveStreamCount
+        {
+            get => _liveStreamCount;
+            set => SetProperty(ref _liveStreamCount, value);
+        }
+
+        public string ModelProcess
+        {
+            get => _modelProcess;
+            set => SetProperty(ref _modelProcess, value);
+        }
+
+        public bool AllClass
+        {
+            get => _allClass;
+            set => SetProperty(ref _allClass, value);
+        }
+
+        public double RoiX
+        {
+            get => _roiX;
+            set
+            {
+                if (SetProperty(ref _roiX, value))
+                {
+                    OnPropertyChanged(nameof(RoiLeftStar));
+                    OnPropertyChanged(nameof(RoiRightStar));
+                }
+            }
+        }
+
+        public double RoiY
+        {
+            get => _roiY;
+            set
+            {
+                if (SetProperty(ref _roiY, value))
+                {
+                    OnPropertyChanged(nameof(RoiTopStar));
+                    OnPropertyChanged(nameof(RoiBottomStar));
+                }
+            }
+        }
+
+        public double RoiWidth
+        {
+            get => _roiWidth;
+            set
+            {
+                if (SetProperty(ref _roiWidth, value))
+                {
+                    OnPropertyChanged(nameof(RoiWidthStar));
+                    OnPropertyChanged(nameof(RoiRightStar));
+                }
+            }
+        }
+
+        public double RoiHeight
+        {
+            get => _roiHeight;
+            set
+            {
+                if (SetProperty(ref _roiHeight, value))
+                {
+                    OnPropertyChanged(nameof(RoiHeightStar));
+                    OnPropertyChanged(nameof(RoiBottomStar));
+                }
+            }
+        }
+
+        public System.Windows.GridLength RoiLeftStar => new System.Windows.GridLength(System.Math.Max(0, _roiX), System.Windows.GridUnitType.Star);
+        public System.Windows.GridLength RoiWidthStar => new System.Windows.GridLength(System.Math.Max(1, _roiWidth), System.Windows.GridUnitType.Star);
+        public System.Windows.GridLength RoiRightStar => new System.Windows.GridLength(System.Math.Max(0, 100 - _roiX - _roiWidth), System.Windows.GridUnitType.Star);
+        public System.Windows.GridLength RoiTopStar => new System.Windows.GridLength(System.Math.Max(0, _roiY), System.Windows.GridUnitType.Star);
+        public System.Windows.GridLength RoiHeightStar => new System.Windows.GridLength(System.Math.Max(1, _roiHeight), System.Windows.GridUnitType.Star);
+        public System.Windows.GridLength RoiBottomStar => new System.Windows.GridLength(System.Math.Max(0, 100 - _roiY - _roiHeight), System.Windows.GridUnitType.Star);
 
         public bool IsSettingsMode
         {
@@ -163,6 +272,7 @@ namespace Client.ViewModels
         public ICommand ConnectCameraCommand { get; }
         public ICommand DisconnectCameraCommand { get; }
         public ICommand StartCommand { get; }
+        public ICommand ToggleStreamDetectionCommand { get; }
         public ICommand ToggleSettingsCommand { get; }
         public ICommand CancelSettingsCommand { get; }
 
@@ -189,6 +299,7 @@ namespace Client.ViewModels
             DisconnectCameraCommand = new RelayCommand(async _ => await DisconnectCamera(), _ => IsCameraConnected && !IsSettingsMode);
             // ====== TEST IMAGE MODE CODE ======
             StartCommand = new RelayCommand(async _ => await Start(), _ => (IsCameraConnected || (TestMode && HasTestImage)) && !IsDetecting && !IsSettingsMode);
+            ToggleStreamDetectionCommand = new RelayCommand(_ => ToggleStreamDetection(), _ => IsCameraConnected || (TestMode && HasTestImage));
             SelectTestImageCommand = new RelayCommand(_ => SelectTestImage());
             ClearTestImageCommand = new RelayCommand(_ => ClearTestImage());
             // ==================================
@@ -210,6 +321,13 @@ namespace Client.ViewModels
                 CaptureHeight = settings.Camera.CaptureHeight;
                 Fps = settings.Camera.Fps;
                 TestMode = settings.Camera.TestMode;
+
+                ModelProcess = settings.General?.ModelProcess ?? "Capture";
+                AllClass = settings.General?.AllClass ?? false;
+                RoiX = settings.General?.RoiX ?? 0;
+                RoiY = settings.General?.RoiY ?? 0;
+                RoiWidth = settings.General?.RoiWidth ?? 100;
+                RoiHeight = settings.General?.RoiHeight ?? 100;
                 
                 if (SupportedResolutions != null)
                 {
@@ -259,6 +377,7 @@ namespace Client.ViewModels
             IsCameraConnected = false;
             CameraInfo.IsConnected = false;
             CameraInfo.Status = "Disconnected";
+            IsStreamingDetectionActive = false;
             _liveFrame = null;
             DisplayFrame = null;
             IsShowingResult = false;
@@ -270,10 +389,28 @@ namespace Client.ViewModels
         {
             if (IsDetecting) return;
 
-            if (SelectedItem == null)
+            var settings = _settingsService.LoadSettings();
+            bool allClass = settings.General?.AllClass == true;
+            var dbService = new DatabaseService(_settingsService);
+
+            DbItem? dbItemToSave = SelectedItem;
+            if (dbItemToSave == null && allClass)
             {
-                StatusMessage = "Please select a material sample first";
-                _logService.LogError("Start failed: No material sample selected.");
+                try
+                {
+                    var activeItems = await dbService.GetActiveItemsAsync();
+                    dbItemToSave = activeItems.FirstOrDefault();
+                }
+                catch (Exception ex)
+                {
+                    _logService.LogError($"Failed to load fallback item for database reference: {ex.Message}");
+                }
+            }
+
+            if (dbItemToSave == null)
+            {
+                StatusMessage = "Please select a material sample first or check your database connection.";
+                _logService.LogError("Start failed: No active item reference available.");
                 return;
             }
 
@@ -290,19 +427,24 @@ namespace Client.ViewModels
                 {
                     StatusMessage = "Failed to capture image";
                     _logService.LogError("Failed to capture image");
+                    IsDetecting = false;
                     return;
                 }
 
-                var settings = _settingsService.LoadSettings();
                 float confThreshold = (float)settings.AiModels.ConfidenceThreshold;
                 float nmsThreshold = (float)settings.AiModels.NmsThreshold;
-                int targetClassCode = SelectedItem.ClassCode;
+                int? targetClassCode = allClass ? null : (int?)dbItemToSave?.ClassCode;
+                double rx = settings.General?.RoiX ?? 0;
+                double ry = settings.General?.RoiY ?? 0;
+                double rw = settings.General?.RoiWidth ?? 100;
+                double rh = settings.General?.RoiHeight ?? 100;
 
                 StatusMessage = "Running local AI inference...";
-                _logService.LogInfo($"Inference on model: {System.IO.Path.GetFileName(_detector.CurrentModelPath)} targetClass={targetClassCode} conf={confThreshold} iou={nmsThreshold}");
+                string targetDesc = targetClassCode.HasValue ? targetClassCode.Value.ToString() : "All Classes";
+                _logService.LogInfo($"Inference on model: {System.IO.Path.GetFileName(_detector.CurrentModelPath)} targetClass={targetDesc} conf={confThreshold} iou={nmsThreshold} roi=[{rx}%,{ry}%,{rw}%,{rh}%]");
 
                 // Chạy AI local trên luồng phụ để tránh block UI
-                var localResult = await Task.Run(() => _detector.Detect(imageData, confThreshold, nmsThreshold, targetClassCode));
+                var localResult = await Task.Run(() => _detector.Detect(imageData, confThreshold, nmsThreshold, targetClassCode, rx, ry, rw, rh));
 
                 if (!localResult.Result.IsSuccess)
                 {
@@ -367,14 +509,13 @@ namespace Client.ViewModels
 
                 // Lưu kết quả detect vào SQL Server
                 StatusMessage = "Saving detection result to database...";
-                var dbService = new DatabaseService(_settingsService);
-                await dbService.SaveDetectionResultAsync(localResult.Result, SelectedItem, rawPath, resultPath);
+                await dbService.SaveDetectionResultAsync(localResult.Result, dbItemToSave!, rawPath, resultPath);
 
                 LastResult = localResult.Result;
                 StatusMessage = $"Detected: {localResult.Result.Count} objects | {localResult.Result.ProcessingTimeMs:0.##} ms";
                 _logService.LogInfo(StatusMessage);
 
-                _navigateToResult?.Invoke(localResult.Result, localResult.AnnotatedImageBytes ?? Array.Empty<byte>());
+                _navigateToResult?.Invoke(localResult.Result, localResult.UiAnnotatedImageBytes ?? Array.Empty<byte>());
             }
             catch (Exception ex)
             {
@@ -387,15 +528,142 @@ namespace Client.ViewModels
             }
         }
 
+        private bool _isProcessingStreamFrame = false;
+        private readonly object _streamLock = new object();
+
         private void OnFrameCaptured(object? sender, BitmapSource frame)
         {
             _liveFrame = frame;
             // ====== TEST IMAGE MODE CODE ======
             if (HasTestImage) return;
             // ==================================
-            if (!IsShowingResult)
+            
+            if (string.Equals(ModelProcess, "Stream", StringComparison.OrdinalIgnoreCase) && IsStreamingDetectionActive)
             {
-                DisplayFrame = frame;
+                bool startProcessing = false;
+                lock (_streamLock)
+                {
+                    if (!_isProcessingStreamFrame)
+                    {
+                        _isProcessingStreamFrame = true;
+                        startProcessing = true;
+                    }
+                }
+
+                if (startProcessing)
+                {
+                    Task.Run(() =>
+                    {
+                        try
+                        {
+                            byte[]? imageData = null;
+                            App.Current.Dispatcher.Invoke(() =>
+                            {
+                                imageData = BitmapSourceToByteArray(frame);
+                            });
+
+                            if (imageData != null)
+                            {
+                                var settings = _settingsService.LoadSettings();
+                                float confThreshold = (float)settings.AiModels.ConfidenceThreshold;
+                                float nmsThreshold = (float)settings.AiModels.NmsThreshold;
+                                bool allClass = settings.General?.AllClass == true;
+                                int? targetClassCode = allClass ? null : (int?)SelectedItem?.ClassCode;
+                                double rx = settings.General?.RoiX ?? 0;
+                                double ry = settings.General?.RoiY ?? 0;
+                                double rw = settings.General?.RoiWidth ?? 100;
+                                double rh = settings.General?.RoiHeight ?? 100;
+
+                                var localResult = _detector.Detect(imageData, confThreshold, nmsThreshold, targetClassCode, rx, ry, rw, rh);
+                                if (localResult.Result.IsSuccess && localResult.UiAnnotatedImageBytes != null)
+                                {
+                                    App.Current.Dispatcher.Invoke(() =>
+                                    {
+                                        var displayImage = ByteArrayToBitmapSource(localResult.UiAnnotatedImageBytes);
+                                        if (displayImage != null)
+                                        {
+                                            DisplayFrame = displayImage;
+                                        }
+                                        LiveStreamCount = localResult.Result.Count;
+                                    });
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error processing stream frame: {ex.Message}");
+                        }
+                        finally
+                        {
+                            lock (_streamLock)
+                            {
+                                _isProcessingStreamFrame = false;
+                            }
+                        }
+                    });
+                }
+            }
+            else
+            {
+                if (!IsShowingResult)
+                {
+                    DisplayFrame = frame;
+                }
+            }
+        }
+
+        private byte[] BitmapSourceToByteArray(BitmapSource bitmapSource)
+        {
+            if (bitmapSource == null)
+                return Array.Empty<byte>();
+
+            try
+            {
+                // Clone để tránh bị overwrite bởi camera stream
+                var safeBitmap = bitmapSource.Clone();
+                
+                if (safeBitmap.CanFreeze && !safeBitmap.IsFrozen)
+                    safeBitmap.Freeze();
+
+                // Convert format về chuẩn
+                var formatted = new FormatConvertedBitmap();
+                formatted.BeginInit();
+                formatted.Source = safeBitmap;
+                formatted.DestinationFormat = PixelFormats.Bgr24;
+                formatted.EndInit();
+                formatted.Freeze();
+
+                using (var stream = new MemoryStream())
+                {
+                    var encoder = new JpegBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(formatted));
+                    encoder.Save(stream);
+                    return stream.ToArray();
+                }
+            }
+            catch
+            {
+                return Array.Empty<byte>();
+            }
+}
+
+        private void ToggleStreamDetection()
+        {
+            IsStreamingDetectionActive = !IsStreamingDetectionActive;
+            if (IsStreamingDetectionActive)
+            {
+                StatusMessage = "Live stream detection started.";
+                _logService.LogInfo("Live stream detection started.");
+            }
+            else
+            {
+                StatusMessage = "Live stream detection stopped.";
+                _logService.LogInfo("Live stream detection stopped.");
+                if (_liveFrame != null)
+                {
+                    DisplayFrame = _liveFrame;
+                }
+                LiveStreamCount = 0;
             }
         }
 

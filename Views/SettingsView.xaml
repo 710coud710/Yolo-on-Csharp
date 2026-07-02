@@ -183,6 +183,119 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
+
+                    <!-- General Settings Card -->
+                    <Border Background="#FFFFFF"
+                            BorderBrush="#E5E5EA"
+                            BorderThickness="1"
+                            CornerRadius="16"
+                            Padding="20"
+                            Margin="0,16,0,0">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
+                        </Border.Effect>
+                        <StackPanel>
+                            <TextBlock Text="General Settings" 
+                                       FontSize="16" 
+                                       FontWeight="Bold" 
+                                       Foreground="#1C1C1E"
+                                       Margin="0,0,0,16"/>
+                            
+                            <TextBlock Text="Model Process:" 
+                                       Foreground="#8E8E93" 
+                                       FontSize="13"
+                                       FontWeight="Medium"
+                                       Margin="0,0,0,6"/>
+                            <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
+                                <ComboBox SelectedValue="{Binding ModelProcess, Mode=TwoWay}"
+                                          SelectedValuePath="Content"
+                                          Padding="10,0"
+                                          FontSize="13"
+                                          BorderThickness="0"
+                                          Background="Transparent"
+                                          VerticalContentAlignment="Center">
+                                    <ComboBoxItem Content="Capture"/>
+                                    <ComboBoxItem Content="Stream"/>
+                                </ComboBox>
+                            </Border>
+
+                            <!-- All Class Toggle Switch -->
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="Detect All Classes:" 
+                                               FontSize="13" 
+                                               FontWeight="Medium" 
+                                               Foreground="#8E8E93"/>
+                                    <TextBlock Text="Detect all classes instead of selected item code" 
+                                               FontSize="11" 
+                                               Foreground="#C7C7CC"
+                                               Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <ToggleButton Grid.Column="1" 
+                                              Style="{StaticResource ToggleSwitchStyle}"
+                                              IsChecked="{Binding AllClass, Mode=TwoWay}"
+                                              VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <Separator Background="#E5E5EA" Margin="0,16,0,16"/>
+
+                            <TextBlock Text="Region of Interest (ROI) - Percentage (0% - 100%)" 
+                                       FontSize="14" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="#1C1C1E"
+                                       Margin="0,0,0,12"/>
+
+                            <!-- Grid for ROI inputs (X, Y, Width, Height) -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="12"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- X -->
+                                <StackPanel Grid.Row="0" Grid.Column="0">
+                                    <TextBlock Text="ROI X (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
+                                    <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                        <TextBox Text="{Binding RoiX, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Y -->
+                                <StackPanel Grid.Row="0" Grid.Column="2">
+                                    <TextBlock Text="ROI Y (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
+                                    <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                        <TextBox Text="{Binding RoiY, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Width -->
+                                <StackPanel Grid.Row="2" Grid.Column="0">
+                                    <TextBlock Text="ROI Width (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
+                                    <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                        <TextBox Text="{Binding RoiWidth, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Height -->
+                                <StackPanel Grid.Row="2" Grid.Column="2">
+                                    <TextBlock Text="ROI Height (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
+                                    <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                        <TextBox Text="{Binding RoiHeight, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <!-- Camera Settings Card (Right) -->

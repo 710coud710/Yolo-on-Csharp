@@ -123,6 +123,15 @@ namespace Client.Services
                     Quality = DefaultSettings.ImageQuality,
                     SaveMode = DefaultSettings.ImageSaveMode
                 },
+                General = new GeneralSettings
+                {
+                    ModelProcess = DefaultSettings.GeneralModelProcess,
+                    AllClass = DefaultSettings.GeneralAllClass,
+                    RoiX = DefaultSettings.GeneralRoiX,
+                    RoiY = DefaultSettings.GeneralRoiY,
+                    RoiWidth = DefaultSettings.GeneralRoiWidth,
+                    RoiHeight = DefaultSettings.GeneralRoiHeight
+                },
                 DatabaseConnectionString = DefaultSettings.DatabaseConnectionString
             };
         }

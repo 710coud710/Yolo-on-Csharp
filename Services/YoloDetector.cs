@@ -99,7 +99,7 @@ namespace Client.Services
             }
         }
 
-        public LocalDetectionResponse Detect(byte[] imageBytes, float confidenceThreshold = 0.25f, float nmsThreshold = 0.45f, int? targetClassCode = null)
+        public LocalDetectionResponse Detect(byte[] imageBytes, float confidenceThreshold = 0.25f, float nmsThreshold = 0.45f, int? targetClassCode = null, double roiX = 0, double roiY = 0, double roiWidth = 100, double roiHeight = 100)
         {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var response = new LocalDetectionResponse();
@@ -122,20 +122,60 @@ namespace Client.Services
                     return response;
                 }
 
+                // Tính toán pixel coordinates cho ROI
+                int rx = (int)(src.Width * roiX / 100.0);
+                int ry = (int)(src.Height * roiY / 100.0);
+                int rw = (int)(src.Width * roiWidth / 100.0);
+                int rh = (int)(src.Height * roiHeight / 100.0);
+
+                // Bảo đảm giới hạn của ảnh
+                rx = Math.Clamp(rx, 0, src.Width - 1);
+                ry = Math.Clamp(ry, 0, src.Height - 1);
+                rw = Math.Clamp(rw, 1, src.Width - rx);
+                rh = Math.Clamp(rh, 1, src.Height - ry);
+
+                bool isRoiEnabled = rw < src.Width || rh < src.Height || rx > 0 || ry > 0;
                 List<DetectedObject> detectedObjects;
 
-                lock (_lock)
+                if (isRoiEnabled)
                 {
-                    if (_session == null || _currentModelPath == "MockMode")
+                    // Crop vùng ROI để detect
+                    var roiRect = new Rect(rx, ry, rw, rh);
+                    using var roiMat = new Mat(src, roiRect);
+
+                    lock (_lock)
                     {
-                        // --- CHẾ ĐỘ GIẢ LẬP (MOCK MODE) ---
-                        detectedObjects = GenerateMockDetections(src.Width, src.Height, targetClassCode);
-                        System.Threading.Thread.Sleep(50); // Giả lập thời gian chạy AI
+                        if (_session == null || _currentModelPath == "MockMode")
+                        {
+                            detectedObjects = GenerateMockDetections(roiMat.Width, roiMat.Height, targetClassCode);
+                            System.Threading.Thread.Sleep(50);
+                        }
+                        else
+                        {
+                            detectedObjects = RunOnnxInference(roiMat, confidenceThreshold, nmsThreshold);
+                        }
                     }
-                    else
+
+                    // Dịch chuyển toạ độ các object được detect về toạ độ của ảnh gốc
+                    foreach (var obj in detectedObjects)
                     {
-                        // --- CHẠY AI THỰC TẾ ---
-                        detectedObjects = RunOnnxInference(src, confidenceThreshold, nmsThreshold);
+                        obj.X += rx;
+                        obj.Y += ry;
+                    }
+                }
+                else
+                {
+                    lock (_lock)
+                    {
+                        if (_session == null || _currentModelPath == "MockMode")
+                        {
+                            detectedObjects = GenerateMockDetections(src.Width, src.Height, targetClassCode);
+                            System.Threading.Thread.Sleep(50);
+                        }
+                        else
+                        {
+                            detectedObjects = RunOnnxInference(src, confidenceThreshold, nmsThreshold);
+                        }
                     }
                 }
 
@@ -144,11 +184,22 @@ namespace Client.Services
                     detectedObjects = detectedObjects.Where(o => o.ClassId == targetClassCode.Value).ToList();
                 }
 
-                // Vẽ Bounding Boxes lên ảnh bằng OpenCV
+                // 1. Vẽ Bounding Boxes của objects lên ảnh
                 DrawDetections(src, detectedObjects);
 
-                // Encode ngược lại sang byte[] JPEG
+                // 2. Encode sang byte[] JPEG cho lưu trữ (không có khung ROI)
                 Cv2.ImEncode(".jpg", src, out byte[] outputBytes);
+
+                // 3. Vẽ khung ROI (nếu được kích hoạt) lên cùng ảnh để hiển thị lên UI
+                if (isRoiEnabled)
+                {
+                    var roiRect = new Rect(rx, ry, rw, rh);
+                    Cv2.Rectangle(src, roiRect, new Scalar(0, 165, 255), 2, LineTypes.Link8); // Màu Orange
+                    Cv2.PutText(src, "ROI", new Point(rx + 5, ry + 20), HersheyFonts.HersheySimplex, 0.6, new Scalar(0, 165, 255), 2);
+                }
+
+                // 4. Encode sang byte[] JPEG cho giao diện
+                Cv2.ImEncode(".jpg", src, out byte[] uiOutputBytes);
 
                 stopwatch.Stop();
 
@@ -159,6 +210,7 @@ namespace Client.Services
                 response.Result.ProcessingTimeMs = stopwatch.Elapsed.TotalMilliseconds;
                 response.Result.ModelPath = _currentModelPath;
                 response.AnnotatedImageBytes = outputBytes;
+                response.UiAnnotatedImageBytes = uiOutputBytes;
             }
             catch (Exception ex)
             {
@@ -183,8 +235,8 @@ namespace Client.Services
             var results = new List<DetectedObject>();
 
             // 1. Tiền xử lý ảnh (Resize sang kích thước model yêu cầu, mặc định 640)
-            int inputWidth = 640;
-            int inputHeight = 640;
+            int inputWidth = 1280;
+            int inputHeight = 1280;
 
             if (_session != null)
             {
@@ -193,8 +245,8 @@ namespace Client.Services
                 var dims = inputMeta.Dimensions;
                 if (dims != null && dims.Length >= 4)
                 {
-                    int h = dims[2];
-                    int w = dims[3];
+                    int h = dims[2]; // Đọc chiều cao cấu hình trong file ONNX
+                    int w = dims[3]; // Đọc chiều rộng cấu hình trong file ONNX
                     if (h > 0) inputHeight = h;
                     if (w > 0) inputWidth = w;
                 }

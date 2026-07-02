@@ -35,6 +35,12 @@ namespace Client.ViewModels
         
         private string _databaseConnectionString = string.Empty;
         private bool? _testConnectionOk = null;
+        private string _modelProcess = "Capture";
+        private bool _allClass = false;
+        private double _roiX = 0;
+        private double _roiY = 0;
+        private double _roiWidth = 100;
+        private double _roiHeight = 100;
 
         private bool _isUnlocked = false;
         private string _unlockPassword = string.Empty;
@@ -226,6 +232,42 @@ namespace Client.ViewModels
             set => SetProperty(ref _saveMode, value);
         }
 
+        public string ModelProcess
+        {
+            get => _modelProcess;
+            set => SetProperty(ref _modelProcess, value);
+        }
+
+        public bool AllClass
+        {
+            get => _allClass;
+            set => SetProperty(ref _allClass, value);
+        }
+
+        public double RoiX
+        {
+            get => _roiX;
+            set => SetProperty(ref _roiX, value);
+        }
+
+        public double RoiY
+        {
+            get => _roiY;
+            set => SetProperty(ref _roiY, value);
+        }
+
+        public double RoiWidth
+        {
+            get => _roiWidth;
+            set => SetProperty(ref _roiWidth, value);
+        }
+
+        public double RoiHeight
+        {
+            get => _roiHeight;
+            set => SetProperty(ref _roiHeight, value);
+        }
+
         public ICommand SaveSettingsCommand { get; }
         public ICommand ResetSettingsCommand { get; }
         public ICommand BrowseSaveDirectoryCommand { get; }
@@ -285,6 +327,13 @@ namespace Client.ViewModels
                 ImageQuality = settings.Image.Quality;
                 SaveMode = settings.Image.SaveMode ?? DefaultSettings.ImageSaveMode;
                 DatabaseConnectionString = settings.DatabaseConnectionString ?? DefaultSettings.DatabaseConnectionString;
+
+                ModelProcess = settings.General?.ModelProcess ?? DefaultSettings.GeneralModelProcess;
+                AllClass = settings.General?.AllClass ?? DefaultSettings.GeneralAllClass;
+                RoiX = settings.General?.RoiX ?? DefaultSettings.GeneralRoiX;
+                RoiY = settings.General?.RoiY ?? DefaultSettings.GeneralRoiY;
+                RoiWidth = settings.General?.RoiWidth ?? DefaultSettings.GeneralRoiWidth;
+                RoiHeight = settings.General?.RoiHeight ?? DefaultSettings.GeneralRoiHeight;
 
                 StatusMessage = "Settings loaded successfully";
             }
@@ -379,6 +428,15 @@ namespace Client.ViewModels
                         Quality = ImageQuality,
                         SaveMode = SaveMode
                     },
+                    General = new GeneralSettings
+                    {
+                        ModelProcess = ModelProcess,
+                        AllClass = AllClass,
+                        RoiX = RoiX,
+                        RoiY = RoiY,
+                        RoiWidth = RoiWidth,
+                        RoiHeight = RoiHeight
+                    },
                     DatabaseConnectionString = DatabaseConnectionString
                 };
 
@@ -434,6 +492,13 @@ namespace Client.ViewModels
             SaveMode = DefaultSettings.ImageSaveMode;
             DatabaseConnectionString = DefaultSettings.DatabaseConnectionString;
             TestConnectionOk = null;
+
+            ModelProcess = DefaultSettings.GeneralModelProcess;
+            AllClass = DefaultSettings.GeneralAllClass;
+            RoiX = DefaultSettings.GeneralRoiX;
+            RoiY = DefaultSettings.GeneralRoiY;
+            RoiWidth = DefaultSettings.GeneralRoiWidth;
+            RoiHeight = DefaultSettings.GeneralRoiHeight;
 
             StatusMessage = "Settings reset to default";
         }

@@ -31,7 +31,7 @@ namespace Client.Services
                 try
                 {
                     // 1. Khởi tạo VideoCapture của OpenCV sử dụng backend DirectShow (Index 0)
-                    _videoCapture = new VideoCapture(0, VideoCaptureAPIs.DSHOW);
+                    _videoCapture = new VideoCapture(0, VideoCaptureAPIs.MSMF);
                     
                     if (!_videoCapture.IsOpened())
                     {
@@ -40,7 +40,10 @@ namespace Client.Services
                         return false;
                     }
 
-                    // 2. Thiết lập Resolution & FPS mong muốn
+                    // 2. Thiết lập định dạng nén MJPEG và Resolution & FPS mong muốn
+                    // Cần thiết lập MJPEG (FourCC) trước khi đặt độ phân giải cao (như 4K 3840x2160)
+                    // để tránh nghẽn băng thông USB dẫn đến khởi tạo chậm hoặc lỗi.
+                    _videoCapture.Set(VideoCaptureProperties.FourCC, OpenCvSharp.FourCC.FromString("MJPG"));
                     _videoCapture.Set(VideoCaptureProperties.FrameWidth, width);
                     _videoCapture.Set(VideoCaptureProperties.FrameHeight, height);
                     _videoCapture.Set(VideoCaptureProperties.Fps, fps);

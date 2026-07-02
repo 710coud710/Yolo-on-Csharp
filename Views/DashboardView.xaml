@@ -38,11 +38,42 @@
                 <Grid>
                     <!-- Camera Preview -->
                     <Viewbox Stretch="Uniform" Margin="8">
-                        <Image x:Name="CameraPreview"                               
-                                Source="{Binding DisplayFrame}"
-                                Stretch="Uniform"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
+                        <Grid>
+                            <Image x:Name="CameraPreview"                               
+                                    Source="{Binding DisplayFrame}"
+                                    Stretch="Uniform"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"/>
+                            
+                            <!-- ROI Overlay Box (WPF border) -->
+                            <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                  Visibility="{Binding IsRoiOverlayVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding RoiLeftStar}"/>
+                                    <ColumnDefinition Width="{Binding RoiWidthStar}"/>
+                                    <ColumnDefinition Width="{Binding RoiRightStar}"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="{Binding RoiTopStar}"/>
+                                    <RowDefinition Height="{Binding RoiHeightStar}"/>
+                                    <RowDefinition Height="{Binding RoiBottomStar}"/>
+                                </Grid.RowDefinitions>
+                                
+                                <!-- The ROI Border is placed in the center cell -->
+                                <Border Grid.Column="1" Grid.Row="1"
+                                        BorderBrush="#FF9500"
+                                        BorderThickness="2"
+                                        Background="Transparent">
+                                    <TextBlock Text="ROI" 
+                                               Foreground="#FF9500" 
+                                               FontWeight="Bold" 
+                                               FontSize="12" 
+                                               Margin="4"
+                                               VerticalAlignment="Top"
+                                               HorizontalAlignment="Left"/>
+                                </Border>
+                            </Grid>
+                        </Grid>
                     </Viewbox>
 
                     <!-- Detect Loading Overlay -->
@@ -400,6 +431,7 @@
                                        FontSize="13"/>
                         </StackPanel>
 
+                        <!-- Capture Mode Start Button -->
                         <Button
                                 Command="{Binding StartCommand}"
                                 Height="46" 
@@ -409,12 +441,9 @@
                                 FontSize="15"
                                 FontWeight="Bold"
                                 Cursor="Hand">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <materialDesign:PackIcon Kind="Play" Width="18" Height="18" Foreground="White" />
-                                <TextBlock Text="Start Count" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                            </StackPanel>
                             <Button.Style>
                                 <Style TargetType="Button">
+                                    <Setter Property="Visibility" Value="Visible"/>
                                     <Setter Property="Template">
                                         <Setter.Value>
                                             <ControlTemplate TargetType="Button">
@@ -441,18 +470,113 @@
                                             <Setter Property="Foreground" Value="#8E8E93"/>
                                             <Setter Property="Cursor" Value="No"/>
                                         </Trigger>
+                                        <DataTrigger Binding="{Binding ModelProcess}" Value="Stream">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Button.Style>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Play" Width="18" Height="18" Foreground="White" />
+                                <TextBlock Text="Start Count" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Button>
 
-                        <!-- Last Result -->
+                        <!-- Stream Mode Toggle Button -->
+                        <Button
+                                Command="{Binding ToggleStreamDetectionCommand}"
+                                Height="46" 
+                                Foreground="White" 
+                                BorderThickness="0"
+                                FontSize="15"
+                                FontWeight="Bold"
+                                Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Setter Property="Background" Value="#34C759"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        CornerRadius="23" 
+                                                        Padding="10,0">
+                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ModelProcess}" Value="Stream">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#2EB852"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsStreamingDetectionActive}" Value="True">
+                                            <Setter Property="Background" Value="#FF3B30"/>
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsStreamingDetectionActive}" Value="True"/>
+                                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Background" Value="#E0352B"/>
+                                        </MultiDataTrigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Background" Value="#E5E5EA"/>
+                                            <Setter Property="Foreground" Value="#8E8E93"/>
+                                            <Setter Property="Cursor" Value="No"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Width="18" Height="18" Foreground="White">
+                                    <materialDesign:PackIcon.Style>
+                                        <Style TargetType="materialDesign:PackIcon">
+                                            <Setter Property="Kind" Value="Play"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStreamingDetectionActive}" Value="True">
+                                                    <Setter Property="Kind" Value="Stop"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </materialDesign:PackIcon.Style>
+                                </materialDesign:PackIcon>
+                                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="Start Stream"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStreamingDetectionActive}" Value="True">
+                                                    <Setter Property="Text" Value="Stop Stream"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Last Result Card (Capture Mode Only) -->
                         <Border Margin="0,16,0,0" 
                                 Background="#F2F2F7" 
                                 BorderBrush="#E5E5EA" 
                                 BorderThickness="1" 
                                 CornerRadius="12" 
                                 Padding="12">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ModelProcess}" Value="Stream">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
                             <StackPanel>
                                 <TextBlock Text="Last Result" 
                                            FontWeight="SemiBold" 
@@ -466,6 +590,49 @@
                                 <TextBlock Foreground="#3A3A3C" Margin="0,4,0,0" FontSize="13">
                                     <Run Text="Time: " FontWeight="Medium"/>
                                     <Run Text="{Binding LastResult.Timestamp, Mode=OneWay, StringFormat='HH:mm:ss', FallbackValue=--}"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Live Stream Count Card (Stream Mode Only) -->
+                        <Border Margin="0,16,0,0" 
+                                Background="#E5F1FF" 
+                                BorderBrush="#B3D7FF" 
+                                BorderThickness="1" 
+                                CornerRadius="12" 
+                                Padding="12">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ModelProcess}" Value="Stream">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel>
+                                <TextBlock Text="Live Stream Detection" 
+                                           FontWeight="SemiBold" 
+                                           Foreground="#007AFF"
+                                           Margin="0,0,0,8"
+                                           FontSize="13"/>
+                                <TextBlock Foreground="#3A3A3C" FontSize="13">
+                                    <Run Text="Live Count: " FontWeight="Medium"/>
+                                    <Run Text="{Binding LiveStreamCount, Mode=OneWay, FallbackValue=0}" FontWeight="Bold" FontSize="15" Foreground="#007AFF"/>
+                                </TextBlock>
+                                <TextBlock Foreground="#8E8E93" Margin="0,4,0,0" FontSize="11">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="Detection stopped"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStreamingDetectionActive}" Value="True">
+                                                    <Setter Property="Text" Value="Streaming AI inference active..."/>
+                                                    <Setter Property="Foreground" Value="#34C759"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
                                 </TextBlock>
                             </StackPanel>
                         </Border>

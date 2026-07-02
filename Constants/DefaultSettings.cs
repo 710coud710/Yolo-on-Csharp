@@ -28,6 +28,14 @@ namespace Client.Constants
 
         // Database Settings
         // public const string DatabaseConnectionString = "Data Source=192.168.7.103;Persist Security Info=True;User ID=qa_web;Password=Adv@1234!;Pooling=False;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Application Name=\"SQL Server Management Studio\";Command Timeout=0";
+        
+        // General Settings
+        public const string GeneralModelProcess = "Capture";
+        public const bool GeneralAllClass = false;
+        public const double GeneralRoiX = 0;
+        public const double GeneralRoiY = 0;
+        public const double GeneralRoiWidth = 100;
+        public const double GeneralRoiHeight = 100;
         public const string DatabaseConnectionString =
         "Data Source=192.168.7.103;" +
         "Persist Security Info=True;" +

@@ -5,6 +5,7 @@ namespace Client.Models
         public AiModelSettings AiModels { get; set; }
         public CameraSettings Camera { get; set; }
         public ImageSettings Image { get; set; }
+        public GeneralSettings General { get; set; }
         public List<int> SelectedClassIds { get; set; }
         public List<SelectedMaterialClassInfo> SelectedClasses { get; set; }
 
@@ -13,12 +14,33 @@ namespace Client.Models
             AiModels = new AiModelSettings();
             Camera = new CameraSettings();
             Image = new ImageSettings();
+            General = new GeneralSettings();
             SelectedClassIds = new List<int>();
             SelectedClasses = new List<SelectedMaterialClassInfo>();
             DatabaseConnectionString = string.Empty;
         }
 
         public string DatabaseConnectionString { get; set; }
+    }
+
+    public class GeneralSettings
+    {
+        public string ModelProcess { get; set; } // "Capture" or "Stream"
+        public bool AllClass { get; set; }
+        public double RoiX { get; set; }
+        public double RoiY { get; set; }
+        public double RoiWidth { get; set; }
+        public double RoiHeight { get; set; }
+
+        public GeneralSettings()
+        {
+            ModelProcess = "Capture";
+            AllClass = false;
+            RoiX = 0;
+            RoiY = 0;
+            RoiWidth = 100;
+            RoiHeight = 100;
+        }
     }
 
     public class SelectedMaterialClassInfo
