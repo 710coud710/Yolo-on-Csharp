@@ -148,6 +148,70 @@
                                          materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
                             </Border>
                             
+                            <Separator Background="#E5E5EA" Margin="0,8,0,16"/>
+
+                            <!-- Use Letterbox Toggle Switch -->
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="Use Letterbox Preprocessing:" 
+                                               FontSize="13" 
+                                               FontWeight="Medium" 
+                                               Foreground="#8E8E93"/>
+                                    <TextBlock Text="Maintain aspect ratio and pad image (Recommended)" 
+                                               FontSize="11" 
+                                               Foreground="#C7C7CC"
+                                               Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <ToggleButton Grid.Column="1" 
+                                               Style="{StaticResource ToggleSwitchStyle}"
+                                               IsChecked="{Binding UseLetterbox, Mode=TwoWay}"
+                                               VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Enable Tiling Toggle Switch -->
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="Enable Tiling (Patch) Inference:" 
+                                               FontSize="13" 
+                                               FontWeight="Medium" 
+                                               Foreground="#8E8E93"/>
+                                    <TextBlock Text="Split image into tiles for small objects detection" 
+                                               FontSize="11" 
+                                               Foreground="#C7C7CC"
+                                               Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <ToggleButton Grid.Column="1" 
+                                               Style="{StaticResource ToggleSwitchStyle}"
+                                               IsChecked="{Binding EnableTiling, Mode=TwoWay}"
+                                               VerticalAlignment="Center"/>
+                            </Grid>
+
+                            <!-- Tiling Overlap -->
+                            <StackPanel Visibility="{Binding EnableTiling, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="Tiling Overlap Ratio (0.0 - 0.5):" 
+                                           Foreground="#8E8E93" 
+                                           FontSize="13"
+                                           FontWeight="Medium"
+                                           Margin="0,0,0,6"/>
+                                <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
+                                    <TextBox Text="{Binding TilingOverlap, Mode=TwoWay}" 
+                                              Padding="10,0"
+                                              FontSize="13"
+                                              BorderThickness="0"
+                                              Background="Transparent"
+                                              VerticalContentAlignment="Center"
+                                              materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                                 <Button Content="Scan Folder"
                                         Command="{Binding ScanModelsCommand}"

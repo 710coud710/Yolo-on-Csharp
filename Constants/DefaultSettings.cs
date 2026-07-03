@@ -11,6 +11,9 @@ namespace Client.Constants
         public const double ConfidenceThreshold = 0.25;
         public const double NmsThreshold = 0.45;
         public const bool UseGpu = false;
+        public const bool UseLetterbox = true;
+        public const bool EnableTiling = false;
+        public const double TilingOverlap = 0.2;
 
         // Camera Settings
         public const string CameraIpAddress = "192.168.1.100";

@@ -444,7 +444,19 @@ namespace Client.ViewModels
                 _logService.LogInfo($"Inference on model: {System.IO.Path.GetFileName(_detector.CurrentModelPath)} targetClass={targetDesc} conf={confThreshold} iou={nmsThreshold} roi=[{rx}%,{ry}%,{rw}%,{rh}%]");
 
                 // Chạy AI local trên luồng phụ để tránh block UI
-                var localResult = await Task.Run(() => _detector.Detect(imageData, confThreshold, nmsThreshold, targetClassCode, rx, ry, rw, rh));
+                var localResult = await Task.Run(() => _detector.Detect(
+                    imageData, 
+                    confThreshold, 
+                    nmsThreshold, 
+                    targetClassCode, 
+                    rx, 
+                    ry, 
+                    rw, 
+                    rh,
+                    settings.AiModels?.UseLetterbox ?? true,
+                    settings.AiModels?.EnableTiling ?? false,
+                    settings.AiModels?.TilingOverlap ?? 0.2
+                ));
 
                 if (!localResult.Result.IsSuccess)
                 {
@@ -574,7 +586,19 @@ namespace Client.ViewModels
                                 double rw = settings.General?.RoiWidth ?? 100;
                                 double rh = settings.General?.RoiHeight ?? 100;
 
-                                var localResult = _detector.Detect(imageData, confThreshold, nmsThreshold, targetClassCode, rx, ry, rw, rh);
+                                var localResult = _detector.Detect(
+                                    imageData, 
+                                    confThreshold, 
+                                    nmsThreshold, 
+                                    targetClassCode, 
+                                    rx, 
+                                    ry, 
+                                    rw, 
+                                    rh,
+                                    settings.AiModels?.UseLetterbox ?? true,
+                                    settings.AiModels?.EnableTiling ?? false,
+                                    settings.AiModels?.TilingOverlap ?? 0.2
+                                );
                                 if (localResult.Result.IsSuccess && localResult.UiAnnotatedImageBytes != null)
                                 {
                                     App.Current.Dispatcher.Invoke(() =>

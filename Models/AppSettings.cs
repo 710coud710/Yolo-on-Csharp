@@ -64,6 +64,9 @@ namespace Client.Models
         public double ConfidenceThreshold { get; set; }
         public double NmsThreshold { get; set; }
         public bool UseGpu { get; set; }
+        public bool UseLetterbox { get; set; }
+        public bool EnableTiling { get; set; }
+        public double TilingOverlap { get; set; }
 
         public AiModelSettings()
         {
@@ -71,6 +74,9 @@ namespace Client.Models
             ConfidenceThreshold = 0.25;
             NmsThreshold = 0.45;
             UseGpu = false;
+            UseLetterbox = true;
+            EnableTiling = false;
+            TilingOverlap = 0.2;
         }
     }
 

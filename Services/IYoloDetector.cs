@@ -14,7 +14,18 @@ namespace Client.Services
     public interface IYoloDetector : IDisposable
     {
         void LoadModel(string modelPath);
-        LocalDetectionResponse Detect(byte[] imageBytes, float confidenceThreshold = 0.25f, float nmsThreshold = 0.45f, int? targetClassCode = null, double roiX = 0, double roiY = 0, double roiWidth = 100, double roiHeight = 100);
+        LocalDetectionResponse Detect(
+            byte[] imageBytes, 
+            float confidenceThreshold = 0.25f, 
+            float nmsThreshold = 0.45f, 
+            int? targetClassCode = null, 
+            double roiX = 0, 
+            double roiY = 0, 
+            double roiWidth = 100, 
+            double roiHeight = 100,
+            bool useLetterbox = true,
+            bool enableTiling = false,
+            double tilingOverlap = 0.2);
         List<string> GetClassNames();
         string CurrentModelPath { get; }
         bool IsModelLoaded { get; }

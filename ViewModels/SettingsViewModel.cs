@@ -20,6 +20,9 @@ namespace Client.ViewModels
         private double _confidenceThreshold = 0.25;
         private double _nmsThreshold = 0.45;
         private bool _useGpu = false;
+        private bool _useLetterbox = true;
+        private bool _enableTiling = false;
+        private double _tilingOverlap = 0.2;
         
         private string _cameraIp = string.Empty;
         private int _captureWidth = 1920;
@@ -76,6 +79,24 @@ namespace Client.ViewModels
         {
             get => _useGpu;
             set => SetProperty(ref _useGpu, value);
+        }
+
+        public bool UseLetterbox
+        {
+            get => _useLetterbox;
+            set => SetProperty(ref _useLetterbox, value);
+        }
+
+        public bool EnableTiling
+        {
+            get => _enableTiling;
+            set => SetProperty(ref _enableTiling, value);
+        }
+
+        public double TilingOverlap
+        {
+            get => _tilingOverlap;
+            set => SetProperty(ref _tilingOverlap, value);
         }
 
         public string SettingsFilePath
@@ -306,6 +327,9 @@ namespace Client.ViewModels
                 ConfidenceThreshold = settings.AiModels?.ConfidenceThreshold ?? DefaultSettings.ConfidenceThreshold;
                 NmsThreshold = settings.AiModels?.NmsThreshold ?? DefaultSettings.NmsThreshold;
                 UseGpu = settings.AiModels?.UseGpu ?? DefaultSettings.UseGpu;
+                UseLetterbox = settings.AiModels?.UseLetterbox ?? DefaultSettings.UseLetterbox;
+                EnableTiling = settings.AiModels?.EnableTiling ?? DefaultSettings.EnableTiling;
+                TilingOverlap = settings.AiModels?.TilingOverlap ?? DefaultSettings.TilingOverlap;
 
                 CameraIp = settings.Camera.IpAddress;
                 CaptureWidth = settings.Camera.CaptureWidth;
@@ -410,7 +434,10 @@ namespace Client.ViewModels
                         ModelsDirectory = ModelsDirectory,
                         ConfidenceThreshold = ConfidenceThreshold,
                         NmsThreshold = NmsThreshold,
-                        UseGpu = UseGpu
+                        UseGpu = UseGpu,
+                        UseLetterbox = UseLetterbox,
+                        EnableTiling = EnableTiling,
+                        TilingOverlap = TilingOverlap
                     },
                     Camera = new CameraSettings
                     {
@@ -471,6 +498,9 @@ namespace Client.ViewModels
             ConfidenceThreshold = DefaultSettings.ConfidenceThreshold;
             NmsThreshold = DefaultSettings.NmsThreshold;
             UseGpu = DefaultSettings.UseGpu;
+            UseLetterbox = DefaultSettings.UseLetterbox;
+            EnableTiling = DefaultSettings.EnableTiling;
+            TilingOverlap = DefaultSettings.TilingOverlap;
 
             CameraIp = DefaultSettings.CameraIpAddress;
             CaptureWidth = DefaultSettings.CameraCaptureWidth;

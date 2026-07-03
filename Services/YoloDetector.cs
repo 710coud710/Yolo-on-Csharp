@@ -99,7 +99,18 @@ namespace Client.Services
             }
         }
 
-        public LocalDetectionResponse Detect(byte[] imageBytes, float confidenceThreshold = 0.25f, float nmsThreshold = 0.45f, int? targetClassCode = null, double roiX = 0, double roiY = 0, double roiWidth = 100, double roiHeight = 100)
+        public LocalDetectionResponse Detect(
+            byte[] imageBytes, 
+            float confidenceThreshold = 0.25f, 
+            float nmsThreshold = 0.45f, 
+            int? targetClassCode = null, 
+            double roiX = 0, 
+            double roiY = 0, 
+            double roiWidth = 100, 
+            double roiHeight = 100,
+            bool useLetterbox = true,
+            bool enableTiling = false,
+            double tilingOverlap = 0.2)
         {
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var response = new LocalDetectionResponse();
@@ -152,7 +163,7 @@ namespace Client.Services
                         }
                         else
                         {
-                            detectedObjects = RunOnnxInference(roiMat, confidenceThreshold, nmsThreshold);
+                            detectedObjects = RunDetection(roiMat, confidenceThreshold, nmsThreshold, useLetterbox, enableTiling, tilingOverlap);
                         }
                     }
 
@@ -174,7 +185,7 @@ namespace Client.Services
                         }
                         else
                         {
-                            detectedObjects = RunOnnxInference(src, confidenceThreshold, nmsThreshold);
+                            detectedObjects = RunDetection(src, confidenceThreshold, nmsThreshold, useLetterbox, enableTiling, tilingOverlap);
                         }
                     }
                 }
@@ -230,11 +241,115 @@ namespace Client.Services
 
         // --- CÁC HÀM XỬ LÝ AI ---
 
-        private List<DetectedObject> RunOnnxInference(Mat src, float confidenceThreshold, float nmsThreshold)
+        private List<DetectedObject> RunDetection(Mat img, float confidenceThreshold, float nmsThreshold, bool useLetterbox, bool enableTiling, double tilingOverlap)
+        {
+            if (enableTiling)
+            {
+                return RunTilingInference(img, confidenceThreshold, nmsThreshold, useLetterbox, tilingOverlap);
+            }
+            else
+            {
+                return RunOnnxInference(img, confidenceThreshold, nmsThreshold, useLetterbox);
+            }
+        }
+
+        private List<DetectedObject> RunTilingInference(Mat src, float confidenceThreshold, float nmsThreshold, bool useLetterbox, double tilingOverlap)
+        {
+            int inputWidth = 1280;
+            int inputHeight = 1280;
+
+            if (_session != null)
+            {
+                string firstInputName = _session.InputMetadata.Keys.First();
+                var inputMeta = _session.InputMetadata[firstInputName];
+                var dims = inputMeta.Dimensions;
+                if (dims != null && dims.Length >= 4)
+                {
+                    int h = dims[2];
+                    int w = dims[3];
+                    if (h > 0) inputHeight = h;
+                    if (w > 0) inputWidth = w;
+                }
+            }
+
+            // Nếu kích thước ảnh nhỏ hơn kích thước tile, chạy inference bình thường
+            if (src.Width <= inputWidth && src.Height <= inputHeight)
+            {
+                return RunOnnxInference(src, confidenceThreshold, nmsThreshold, useLetterbox);
+            }
+
+            // Tính bước nhảy (stride) dựa trên overlap
+            int overlapW = (int)(inputWidth * tilingOverlap);
+            int overlapH = (int)(inputHeight * tilingOverlap);
+            int strideW = Math.Max(1, inputWidth - overlapW);
+            int strideH = Math.Max(1, inputHeight - overlapH);
+
+            var xCoords = new List<int>();
+            int cx = 0;
+            while (cx + inputWidth < src.Width)
+            {
+                xCoords.Add(cx);
+                cx += strideW;
+            }
+            xCoords.Add(src.Width - inputWidth);
+            xCoords = xCoords.Where(x => x >= 0).Distinct().ToList();
+
+            var yCoords = new List<int>();
+            int cy = 0;
+            while (cy + inputHeight < src.Height)
+            {
+                yCoords.Add(cy);
+                cy += strideH;
+            }
+            yCoords.Add(src.Height - inputHeight);
+            yCoords = yCoords.Where(y => y >= 0).Distinct().ToList();
+
+            var allObjects = new List<DetectedObject>();
+
+            foreach (int ty in yCoords)
+            {
+                foreach (int tx in xCoords)
+                {
+                    var rect = new Rect(tx, ty, inputWidth, inputHeight);
+                    using var tileMat = new Mat(src, rect);
+
+                    // Chạy suy luận trên tile
+                    var tileDetections = RunOnnxInference(tileMat, confidenceThreshold, nmsThreshold, useLetterbox);
+
+                    // Dịch tọa độ về ảnh gốc
+                    foreach (var obj in tileDetections)
+                    {
+                        obj.X += tx;
+                        obj.Y += ty;
+                        allObjects.Add(obj);
+                    }
+                }
+            }
+
+            if (allObjects.Count == 0)
+            {
+                return allObjects;
+            }
+
+            // Áp dụng NMS để lọc trùng lặp giữa các tile
+            var boxes = allObjects.Select(o => new Rect((int)o.X, (int)o.Y, (int)o.Width, (int)o.Height)).ToList();
+            var confidences = allObjects.Select(o => o.Confidence).ToList();
+            CvDnn.NMSBoxes(boxes, confidences, confidenceThreshold, nmsThreshold, out int[] indices);
+
+            var results = new List<DetectedObject>();
+            foreach (int idx in indices)
+            {
+                results.Add(allObjects[idx]);
+            }
+
+            return results;
+        }
+
+        private List<DetectedObject> RunOnnxInference(Mat src, float confidenceThreshold, float nmsThreshold, bool useLetterbox)
         {
             var results = new List<DetectedObject>();
 
-            // 1. Tiền xử lý ảnh (Resize sang kích thước model yêu cầu, mặc định 640)
+            // 1. Tiền xử lý ảnh (Resize/Letterbox sang kích thước model yêu cầu, mặc định 1280)
             int inputWidth = 1280;
             int inputHeight = 1280;
 
@@ -253,7 +368,27 @@ namespace Client.Services
             }
 
             using var resized = new Mat();
-            Cv2.Resize(src, resized, new Size(inputWidth, inputHeight));
+            int padW = 0;
+            int padH = 0;
+            double scale = 1.0;
+
+            if (useLetterbox)
+            {
+                double r = Math.Min((double)inputWidth / src.Width, (double)inputHeight / src.Height);
+                int newW = (int)Math.Round(src.Width * r);
+                int newH = (int)Math.Round(src.Height * r);
+                padW = (inputWidth - newW) / 2;
+                padH = (inputHeight - newH) / 2;
+
+                using var tempResized = new Mat();
+                Cv2.Resize(src, tempResized, new Size(newW, newH));
+                Cv2.CopyMakeBorder(tempResized, resized, padH, inputHeight - newH - padH, padW, inputWidth - newW - padW, BorderTypes.Constant, new Scalar(114, 114, 114));
+                scale = r;
+            }
+            else
+            {
+                Cv2.Resize(src, resized, new Size(inputWidth, inputHeight));
+            }
 
             // 2. Chuyển đổi định dạng và Chuẩn hóa (BGR -> RGB, / 255.0)
             float[] inputData = new float[1 * 3 * inputWidth * inputHeight];
@@ -282,7 +417,7 @@ namespace Client.Services
 
             // 3. Tạo Tensor đầu vào cho ONNX Runtime
             var inputName = _session!.InputMetadata.Keys.First();
-            var inputTensor = new DenseTensor<float>(inputData, new int[] { 1, 3, inputWidth, inputHeight });
+            var inputTensor = new DenseTensor<float>(inputData, new int[] { 1, 3, inputHeight, inputWidth });
             var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor(inputName, inputTensor) };
 
             // 4. Chạy suy luận
@@ -306,7 +441,7 @@ namespace Client.Services
                 var confidences = new List<float>();
                 var classIds = new List<int>();
 
-                // Tỷ lệ scale tọa độ về kích thước ảnh gốc
+                // Tỷ lệ scale tọa độ về kích thước ảnh gốc (nếu không dùng letterbox)
                 float scaleX = (float)src.Width / inputWidth;
                 float scaleY = (float)src.Height / inputHeight;
 
@@ -335,11 +470,32 @@ namespace Client.Services
                         float h = data[3 * numAnchors + i];
 
                         // Đổi sang x_min, y_min, w, h
-                        float x = cx - w / 2f;
-                        float y = cy - h / 2f;
+                        float lx = cx - w / 2f;
+                        float ty = cy - h / 2f;
 
-                        // Scale về kích thước ảnh gốc và làm tròn số nguyên
-                        boxes.Add(new Rect((int)(x * scaleX), (int)(y * scaleY), (int)(w * scaleX), (int)(h * scaleY)));
+                        float x, y, boxW, boxH;
+                        if (useLetterbox)
+                        {
+                            x = (lx - padW) / (float)scale;
+                            y = (ty - padH) / (float)scale;
+                            boxW = w / (float)scale;
+                            boxH = h / (float)scale;
+                        }
+                        else
+                        {
+                            x = lx * scaleX;
+                            y = ty * scaleY;
+                            boxW = w * scaleX;
+                            boxH = h * scaleY;
+                        }
+
+                        // Giới hạn tọa độ trong ảnh gốc
+                        int ix = Math.Clamp((int)x, 0, src.Width - 1);
+                        int iy = Math.Clamp((int)y, 0, src.Height - 1);
+                        int iw = Math.Clamp((int)boxW, 1, src.Width - ix);
+                        int ih = Math.Clamp((int)boxH, 1, src.Height - iy);
+
+                        boxes.Add(new Rect(ix, iy, iw, ih));
                         confidences.Add(maxClassScore);
                         classIds.Add(maxClassId);
                     }
@@ -365,7 +521,7 @@ namespace Client.Services
             }
             else if (dimensions.Length == 3)
             {
-                // YOLOv5/v7 Format: [1, anchors, 5 + num_classes] hoặc tương tự
+                // YOLOv5/v7 Format: [1, anchors, 5 + num_classes]
                 int anchors = dimensions[1];
                 int cols = dimensions[2];
                 int numClasses = cols - 5;
@@ -406,10 +562,31 @@ namespace Client.Services
                             float w = data[offset + 2];
                             float h = data[offset + 3];
 
-                            float x = cx - w / 2f;
-                            float y = cy - h / 2f;
+                            float lx = cx - w / 2f;
+                            float ty = cy - h / 2f;
 
-                            boxes.Add(new Rect((int)(x * scaleX), (int)(y * scaleY), (int)(w * scaleX), (int)(h * scaleY)));
+                            float x, y, boxW, boxH;
+                            if (useLetterbox)
+                            {
+                                x = (lx - padW) / (float)scale;
+                                y = (ty - padH) / (float)scale;
+                                boxW = w / (float)scale;
+                                boxH = h / (float)scale;
+                            }
+                            else
+                            {
+                                x = lx * scaleX;
+                                y = ty * scaleY;
+                                boxW = w * scaleX;
+                                boxH = h * scaleY;
+                            }
+
+                            int ix = Math.Clamp((int)x, 0, src.Width - 1);
+                            int iy = Math.Clamp((int)y, 0, src.Height - 1);
+                            int iw = Math.Clamp((int)boxW, 1, src.Width - ix);
+                            int ih = Math.Clamp((int)boxH, 1, src.Height - iy);
+
+                            boxes.Add(new Rect(ix, iy, iw, ih));
                             confidences.Add(confidence);
                             classIds.Add(maxClassId);
                         }
