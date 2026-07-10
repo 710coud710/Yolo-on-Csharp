@@ -20,7 +20,7 @@ namespace Client.ViewModels
         private readonly IYoloDetector _detector;
         private readonly ModelManagerService _modelManager;
         private Action? _navigateToSettings;
-        private Action<DetectionResult, byte[]>? _navigateToResult;
+        private Action<DetectionResult, byte[], long>? _navigateToResult;
         private CameraInfo _cameraInfo;
         private DetectionResult? _lastResult;
         private string _statusMessage;
@@ -537,13 +537,13 @@ namespace Client.ViewModels
 
                 // Lưu kết quả detect vào SQL Server
                 StatusMessage = "Saving detection result to database...";
-                await dbService.SaveDetectionResultAsync(localResult.Result, dbItemToSave!, rawPath, resultPath);
+                long detectionId = await dbService.SaveDetectionResultAsync(localResult.Result, dbItemToSave!, rawPath, resultPath);
 
                 LastResult = localResult.Result;
                 StatusMessage = $"Detected: {localResult.Result.Count} objects | {localResult.Result.ProcessingTimeMs:0.##} ms";
                 _logService.LogInfo(StatusMessage);
 
-                _navigateToResult?.Invoke(localResult.Result, localResult.UiAnnotatedImageBytes ?? Array.Empty<byte>());
+                _navigateToResult?.Invoke(localResult.Result, localResult.UiAnnotatedImageBytes ?? Array.Empty<byte>(), detectionId);
             }
             catch (Exception ex)
             {
@@ -815,7 +815,7 @@ namespace Client.ViewModels
             _navigateToSettings = navigateToSettings;
         }
 
-        public void SetNavigateToResult(Action<DetectionResult, byte[]> navigateToResult)
+        public void SetNavigateToResult(Action<DetectionResult, byte[], long> navigateToResult)
         {
             _navigateToResult = navigateToResult;
         }

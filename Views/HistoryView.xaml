@@ -220,11 +220,51 @@
                                             Binding="{Binding ItemName}" 
                                             Width="160"/>
                         <DataGridTextColumn Header="Quantity" 
-                                            Binding="{Binding TotalObjects}" 
-                                            Width="90"/>
+                                             Binding="{Binding TotalObjects}" 
+                                             Width="90"/>
+                        <DataGridTemplateColumn Header="Status" Width="90">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Pass">
+                                                        <Setter Property="Background" Value="#E6F9EE"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Fail">
+                                                        <Setter Property="Background" Value="#FFEBEA"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Pending">
+                                                        <Setter Property="Background" Value="#FFF4E5"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding Status}" FontWeight="Bold" FontSize="12">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Pass">
+                                                            <Setter Property="Foreground" Value="#34C759"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Fail">
+                                                            <Setter Property="Foreground" Value="#FF3B30"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Pending">
+                                                            <Setter Property="Foreground" Value="#FF9500"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                         <DataGridTextColumn Header="Raw Image Path" 
-                                            Binding="{Binding ImagePath}" 
-                                            Width="*"/>
+                                             Binding="{Binding ImagePath}" 
+                                             Width="*"/>
                         <DataGridTextColumn Header="Result Image Path" 
                                             Binding="{Binding ResultImagePath}" 
                                             Width="*"/>

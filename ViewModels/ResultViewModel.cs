@@ -22,6 +22,14 @@ namespace Client.ViewModels
         private string _outputImageUrl;
         private bool _isLoading;
         private string _statusMessage;
+        private string _statusResult = "Pending";
+        private long _detectionId;
+
+        public string StatusResult
+        {
+            get => _statusResult;
+            set => SetProperty(ref _statusResult, value);
+        }
 
         public BitmapSource? OutputImage
         {
@@ -78,6 +86,8 @@ namespace Client.ViewModels
         }
 
         public ICommand BackCommand { get; }
+        public ICommand PassCommand { get; }
+        public ICommand FailCommand { get; }
 
 
 
@@ -89,11 +99,15 @@ namespace Client.ViewModels
             _statusMessage = "Ready";
 
             BackCommand = new RelayCommand(_ => _navigateBack?.Invoke());
+            PassCommand = new RelayCommand(async _ => await UpdateStatusAsync("Pass"));
+            FailCommand = new RelayCommand(async _ => await UpdateStatusAsync("Fail"));
         }
 
-        public void LoadFromLocalResult(DetectionResult result, byte[]? annotatedImageBytes)
+        public void LoadFromLocalResult(DetectionResult result, byte[]? annotatedImageBytes, long detectionId)
         {
-            ImageId = 0;
+            _detectionId = detectionId;
+            StatusResult = "Pending";
+            ImageId = (int)detectionId;
             MachineName = Environment.MachineName;
             TotalDetections = result.Count;
             ProcessingTimeMs = result.ProcessingTimeMs;
@@ -123,6 +137,8 @@ namespace Client.ViewModels
 
         public void LoadFromHistoryLog(HistoryLog log, ISettingsService settingsService)
         {
+            _detectionId = log.Id;
+            StatusResult = log.Status;
             ImageId = log.Id;
             MachineName = log.MachineName;
             TotalDetections = log.TotalObjects;
@@ -186,6 +202,30 @@ namespace Client.ViewModels
         public void SetNavigateBack(Action navigateBack)
         {
             _navigateBack = navigateBack;
+        }
+
+        private async Task UpdateStatusAsync(string newStatus)
+        {
+            if (_detectionId <= 0) return;
+            StatusResult = newStatus;
+            StatusMessage = $"Updating status to {newStatus}...";
+            try
+            {
+                var dbService = new DatabaseService(new SettingsService());
+                bool success = await dbService.UpdateDetectionStatusAsync(_detectionId, newStatus);
+                if (success)
+                {
+                    StatusMessage = $"Status updated to {newStatus} successfully.";
+                }
+                else
+                {
+                    StatusMessage = "Failed to update status in database.";
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error updating status: {ex.Message}";
+            }
         }
     }
 }

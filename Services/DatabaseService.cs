@@ -153,6 +153,7 @@ namespace Client.Services
                                 image_path VARCHAR(500) NULL,
                                 result_image_path VARCHAR(500) NULL,
                                 total_objects INT NOT NULL DEFAULT 0,
+                                status_result VARCHAR(50) NOT NULL DEFAULT 'Pending',
                                 created_at DATETIME NOT NULL DEFAULT GETDATE(),
                                 CONSTRAINT FK_detections_machines FOREIGN KEY (machine_id) REFERENCES machines(id),
                                 CONSTRAINT FK_detections_items FOREIGN KEY (item_id) REFERENCES items(id),
@@ -173,6 +174,11 @@ namespace Client.Services
                             IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_detections_items')
                             BEGIN
                                 ALTER TABLE detections ADD CONSTRAINT FK_detections_items FOREIGN KEY (item_id) REFERENCES items(id);
+                            END
+                            -- Add status_result if missing
+                            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('detections') AND name = 'status_result')
+                            BEGIN
+                                ALTER TABLE detections ADD status_result VARCHAR(50) NOT NULL DEFAULT 'Pending';
                             END
                         END";
                     using (var cmd = new SqlCommand(createDetections, connection)) cmd.ExecuteNonQuery();
@@ -352,14 +358,14 @@ namespace Client.Services
             return (list, totalCount);
         }
 
-        public async Task SaveDetectionResultAsync(DetectionResult result, DbItem selectedItem, string? rawImagePath, string? resultImagePath)
+        public async Task<long> SaveDetectionResultAsync(DetectionResult result, DbItem selectedItem, string? rawImagePath, string? resultImagePath)
         {
             string connString = GetConnectionString();
 
             if (string.IsNullOrWhiteSpace(connString))
             {
                 InMemoryLogService.Instance.LogError("Database connection string is empty or null.");
-                return;
+                return 0;
             }
 
             try
@@ -377,9 +383,9 @@ namespace Client.Services
 
                     // 3. Insert detection
                     string insertDetQuery = @"
-                        INSERT INTO detections (machine_id, item_id, model_id, processing_time_ms, image_path, result_image_path, total_objects, created_at)
+                        INSERT INTO detections (machine_id, item_id, model_id, processing_time_ms, image_path, result_image_path, total_objects, status_result, created_at)
                         OUTPUT INSERTED.id
-                        VALUES (@MachineId, @ItemId, @ModelId, @ProcessingTime, @ImagePath, @ResultImagePath, @TotalObjects, @CreatedAt)";
+                        VALUES (@MachineId, @ItemId, @ModelId, @ProcessingTime, @ImagePath, @ResultImagePath, @TotalObjects, 'Pending', @CreatedAt)";
 
                     long detectionId;
                     using (var cmd = new SqlCommand(insertDetQuery, connection))
@@ -428,11 +434,13 @@ namespace Client.Services
                     }
 
                     InMemoryLogService.Instance.LogInfo($"Saved detection to database successfully. ID: {detectionId}");
+                    return detectionId;
                 }
             }
             catch (Exception ex)
             {
                 InMemoryLogService.Instance.LogError($"Error saving detection to database: {ex.Message}", ex);
+                return 0;
             }
         }
 
@@ -449,7 +457,7 @@ namespace Client.Services
                 {
                     await connection.OpenAsync();
                     string query = @"
-                        SELECT d.id, m.machine_name, i.item_code, i.item_name, d.total_objects, d.created_at, d.image_path, d.result_image_path
+                        SELECT d.id, m.machine_name, i.item_code, i.item_name, d.total_objects, d.created_at, d.image_path, d.result_image_path, d.status_result
                         FROM detections d
                         JOIN machines m ON d.machine_id = m.id
                         JOIN items i ON d.item_id = i.id
@@ -466,7 +474,7 @@ namespace Client.Services
                                 Id = (int)reader.GetInt64(0),
                                 MachineName = reader.GetString(1),
                                 Action = "Detection",
-                                Status = "Success",
+                                Status = reader.IsDBNull(8) ? "Pending" : reader.GetString(8),
                                 Message = $"Counted {total} of {reader.GetString(2)} ({reader.GetString(3)})",
                                 CreatedAt = reader.GetDateTime(5),
                                 ItemCode = reader.GetString(2),
@@ -527,7 +535,7 @@ namespace Client.Services
                     // 2. Truy vấn dữ liệu phân trang
                     int offset = (pageNumber - 1) * pageSize;
                     string query = $@"
-                        SELECT d.id, m.machine_name, i.item_code, i.item_name, d.total_objects, d.created_at, d.image_path, d.result_image_path
+                        SELECT d.id, m.machine_name, i.item_code, i.item_name, d.total_objects, d.created_at, d.image_path, d.result_image_path, d.status_result
                         FROM detections d
                         JOIN machines m ON d.machine_id = m.id
                         JOIN items i ON d.item_id = i.id
@@ -555,7 +563,7 @@ namespace Client.Services
                                     Id = (int)reader.GetInt64(0),
                                     MachineName = reader.GetString(1),
                                     Action = "Detection",
-                                    Status = "Success",
+                                    Status = reader.IsDBNull(8) ? "Pending" : reader.GetString(8),
                                     Message = $"Counted {total} of {reader.GetString(2)} ({reader.GetString(3)})",
                                     CreatedAt = reader.GetDateTime(5),
                                     ItemCode = reader.GetString(2),
@@ -574,6 +582,32 @@ namespace Client.Services
                 Console.WriteLine($"Error loading paged history from database: {ex.Message}");
             }
             return (list, totalCount);
+        }
+
+        public async Task<bool> UpdateDetectionStatusAsync(long detectionId, string status)
+        {
+            string connString = GetConnectionString();
+            if (string.IsNullOrWhiteSpace(connString)) return false;
+            try
+            {
+                using (var connection = new SqlConnection(connString))
+                {
+                    await connection.OpenAsync();
+                    string query = "UPDATE detections SET status_result = @Status WHERE id = @Id";
+                    using (var cmd = new SqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Status", status);
+                        cmd.Parameters.AddWithValue("@Id", detectionId);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating detection status: {ex.Message}");
+                return false;
+            }
         }
 
         private async Task<int> GetOrCreateMachineIdAsync(SqlConnection connection, string hostname)
