@@ -9,11 +9,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <!-- Version Patch.Minor.Major --> 
-    <Version>1.0.0.6</Version>
+    <Version>1.0.0.7</Version>
 	<!-- Thay đổi khi thay đổi logic, phá vỡ logic cũ -->
 	<AssemblyVersion>1.0.0.0</AssemblyVersion> 
 	<!--version của bản build đang chạy, cấu trúc Patch.Minor.Major.Build-->
-    <FileVersion>1.0.0.6</FileVersion>
+    <FileVersion>1.0.0.7</FileVersion>
     <ApplicationIcon>assets\icon.ico</ApplicationIcon>
   </PropertyGroup>
 

@@ -27,6 +27,10 @@ namespace Client.ViewModels
         private string _itemCode = string.Empty;
         private bool _isConfirmationEnabled;
 
+        // Tracks the current relative result-image path and base save dir for file rename on confirmation
+        private string? _resultImageRelativePath;
+        private string? _saveDirectory;
+
         public string ItemCode
         {
             get => _itemCode;
@@ -117,7 +121,8 @@ namespace Client.ViewModels
             FailCommand = new RelayCommand(async _ => await UpdateStatusAsync("Fail"));
         }
 
-        public void LoadFromLocalResult(DetectionResult result, byte[]? annotatedImageBytes, long detectionId, string itemCode)
+        public void LoadFromLocalResult(DetectionResult result, byte[]? annotatedImageBytes, long detectionId, string itemCode,
+            string? resultImageRelativePath = null, string? saveDirectory = null)
         {
             _detectionId = detectionId;
             StatusResult = "PENDING";
@@ -129,7 +134,11 @@ namespace Client.ViewModels
             ProcessingTimeMs = result.ProcessingTimeMs;
             CreatedAt = result.Timestamp;
             OutputImageUrl = result.ImagePath ?? string.Empty;
-            
+
+            // Store for file rename on confirmation
+            _resultImageRelativePath = resultImageRelativePath ?? result.ImagePath;
+            _saveDirectory = saveDirectory;
+
             if (annotatedImageBytes != null && annotatedImageBytes.Length > 0)
             {
                 try
@@ -146,7 +155,6 @@ namespace Client.ViewModels
             {
                 OutputImage = null;
             }
-
 
             StatusMessage = "Local result loaded";
         }
@@ -269,12 +277,78 @@ namespace Client.ViewModels
             StatusMessage = $"Updating status to {newStatus}...";
             try
             {
+                // Determine the suffix for this status
+                string suffix = newStatus.ToLowerInvariant() switch
+                {
+                    "pass"    => "_P",
+                    "fail"    => "_F",
+                    _         => "_N"   // Pending or any other
+                };
+
+                // Attempt to rename the result image file (fire-and-forget on failure — don't block DB update)
+                string? newRelativePath = null;
+                if (!string.IsNullOrWhiteSpace(_resultImageRelativePath))
+                {
+                    try
+                    {
+                        var settingsSvc = new SettingsService();
+                        var settings   = settingsSvc.LoadSettings();
+                        var saveDir    = _saveDirectory ?? settings.Image.SaveDirectory;
+                        if (string.IsNullOrWhiteSpace(saveDir))
+                            saveDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "CapturedImages");
+                        if (!Path.IsPathRooted(saveDir))
+                            saveDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, saveDir);
+
+                        var absOldPath = Path.Combine(saveDir, _resultImageRelativePath.TrimStart('\\', '/'));
+                        if (File.Exists(absOldPath))
+                        {
+                            var dir      = Path.GetDirectoryName(absOldPath)!;
+                            var nameNoExt = Path.GetFileNameWithoutExtension(absOldPath);
+                            var ext      = Path.GetExtension(absOldPath);
+
+                            // Remove any previous suffix before appending the new one
+                            foreach (var s in new[] { "_P", "_F", "_N" })
+                            {
+                                if (nameNoExt.EndsWith(s, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    nameNoExt = nameNoExt[..^s.Length];
+                                    break;
+                                }
+                            }
+
+                            var newFilename = $"{nameNoExt}{suffix}{ext}";
+                            var absNewPath  = Path.Combine(dir, newFilename);
+
+                            // Build new relative path matching original pattern
+                            var relDir      = Path.GetDirectoryName(_resultImageRelativePath.TrimStart('\\', '/'))!;
+                            newRelativePath = "\\" + Path.Combine(relDir, newFilename).Replace('/', '\\');
+
+                            await Task.Run(() => File.Move(absOldPath, absNewPath, overwrite: true));
+                            _resultImageRelativePath = newRelativePath;
+                            _logService.LogInfo($"Renamed result image: {absNewPath}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logService.LogError($"Failed to rename result image (continuing with DB update): {ex.Message}");
+                        newRelativePath = null; // Keep original path in DB if rename fails
+                    }
+                }
+
                 var dbService = new DatabaseService(new SettingsService());
-                bool success = await dbService.UpdateDetectionStatusAsync(_detectionId, newStatus);
+                bool success;
+                if (newRelativePath != null)
+                {
+                    success = await dbService.UpdateDetectionStatusAndImagePathAsync(_detectionId, newStatus, newRelativePath);
+                }
+                else
+                {
+                    success = await dbService.UpdateDetectionStatusAsync(_detectionId, newStatus);
+                }
+
                 if (success)
                 {
                     StatusMessage = $"Status updated to {newStatus} successfully.";
-                    // Tự động quay lại dashboard sau khi xác nhận thành công
                     _navigateBack?.Invoke();
                 }
                 else

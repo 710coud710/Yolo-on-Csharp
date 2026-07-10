@@ -508,28 +508,32 @@ namespace Client.Services
                         FROM detections d
                         JOIN machines m ON d.machine_id = m.id
                         JOIN items i ON d.item_id = i.id
+                        WHERE d.machine_id = @MachineId
                         ORDER BY d.created_at DESC";
 
                     using (var cmd = new SqlCommand(query, connection))
-                    using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        while (await reader.ReadAsync())
+                        cmd.Parameters.AddWithValue("@MachineId", CurrentMachineId);
+                        using (var reader = await cmd.ExecuteReaderAsync())
                         {
-                            int total = reader.GetInt32(4);
-                            list.Add(new HistoryLog
+                            while (await reader.ReadAsync())
                             {
-                                Id = (int)reader.GetInt64(0),
-                                MachineName = reader.GetString(1),
-                                Action = "Detection",
-                                Status = reader.IsDBNull(8) ? "Pending" : reader.GetString(8),
-                                Message = $"Counted {total} of {reader.GetString(2)} ({reader.GetString(3)})",
-                                CreatedAt = reader.GetDateTime(5),
-                                ItemCode = reader.GetString(2),
-                                ItemName = reader.GetString(3),
-                                TotalObjects = total,
-                                ImagePath = reader.IsDBNull(6) ? null : reader.GetString(6),
-                                ResultImagePath = reader.IsDBNull(7) ? null : reader.GetString(7)
-                            });
+                                int total = reader.GetInt32(4);
+                                list.Add(new HistoryLog
+                                {
+                                    Id = (int)reader.GetInt64(0),
+                                    MachineName = reader.GetString(1),
+                                    Action = "Detection",
+                                    Status = reader.IsDBNull(8) ? "Pending" : reader.GetString(8),
+                                    Message = $"Counted {total} of {reader.GetString(2)} ({reader.GetString(3)})",
+                                    CreatedAt = reader.GetDateTime(5),
+                                    ItemCode = reader.GetString(2),
+                                    ItemName = reader.GetString(3),
+                                    TotalObjects = total,
+                                    ImagePath = reader.IsDBNull(6) ? null : reader.GetString(6),
+                                    ResultImagePath = reader.IsDBNull(7) ? null : reader.GetString(7)
+                                });
+                            }
                         }
                     }
                 }
@@ -555,8 +559,8 @@ namespace Client.Services
                 {
                     await connection.OpenAsync();
 
-                    // Xây dựng mệnh đề WHERE lọc tìm kiếm
-                    string whereClause = "WHERE 1 = 1";
+                    // Xây dựng mệnh đề WHERE - luôn lọc theo machine hiện tại
+                    string whereClause = "WHERE d.machine_id = @MachineId";
                     if (!string.IsNullOrWhiteSpace(searchText))
                     {
                         whereClause += " AND (i.item_code LIKE @SearchPattern OR i.item_name LIKE @SearchPattern OR m.machine_name LIKE @SearchPattern)";
@@ -572,6 +576,7 @@ namespace Client.Services
 
                     using (var countCmd = new SqlCommand(countQuery, connection))
                     {
+                        countCmd.Parameters.AddWithValue("@MachineId", CurrentMachineId);
                         if (!string.IsNullOrWhiteSpace(searchText))
                         {
                             countCmd.Parameters.AddWithValue("@SearchPattern", $"%{searchText.Trim()}%");
@@ -593,6 +598,7 @@ namespace Client.Services
 
                     using (var cmd = new SqlCommand(query, connection))
                     {
+                        cmd.Parameters.AddWithValue("@MachineId", CurrentMachineId);
                         cmd.Parameters.AddWithValue("@Offset", offset);
                         cmd.Parameters.AddWithValue("@PageSize", pageSize);
                         if (!string.IsNullOrWhiteSpace(searchText))
@@ -653,6 +659,37 @@ namespace Client.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error updating detection status: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật cả status_result và result_image_path trong một lần truy vấn cơ sở dữ liệu.
+        /// Được sử dụng khi đổi tên tệp hình ảnh kết quả sau khi xác nhận pass/fail.
+        /// </summary>
+        public async Task<bool> UpdateDetectionStatusAndImagePathAsync(long detectionId, string status, string newImagePath)
+        {
+            string connString = GetConnectionString();
+            if (string.IsNullOrWhiteSpace(connString)) return false;
+            try
+            {
+                using (var connection = new SqlConnection(connString))
+                {
+                    await connection.OpenAsync();
+                    string query = "UPDATE detections SET status_result = @Status, result_image_path = @ImagePath WHERE id = @Id";
+                    using (var cmd = new SqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Status", status);
+                        cmd.Parameters.AddWithValue("@ImagePath", newImagePath);
+                        cmd.Parameters.AddWithValue("@Id", detectionId);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating detection status and image path: {ex.Message}");
                 return false;
             }
         }

@@ -20,7 +20,7 @@ namespace Client.ViewModels
         private readonly IYoloDetector _detector;
         private readonly ModelManagerService _modelManager;
         private Action? _navigateToSettings;
-        private Action<DetectionResult, byte[], long>? _navigateToResult;
+        private Action<DetectionResult, byte[], long, string?, string?>? _navigateToResult;
         private CameraInfo _cameraInfo;
         private DetectionResult? _lastResult;
         private string _statusMessage;
@@ -467,6 +467,7 @@ namespace Client.ViewModels
 
                 string? rawPath = null;
                 string? resultPath = null;
+                string? saveDir = null;
 
                 // Tự động lưu ảnh gốc và kết quả detect
                 try
@@ -480,7 +481,7 @@ namespace Client.ViewModels
 
                     if (shouldSave)
                     {
-                        var saveDir = settings.Image.SaveDirectory;
+                        saveDir = settings.Image.SaveDirectory;
                         if (string.IsNullOrWhiteSpace(saveDir))
                         {
                             saveDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "CapturedImages");
@@ -543,7 +544,7 @@ namespace Client.ViewModels
                 StatusMessage = $"Detected: {localResult.Result.Count} objects | {localResult.Result.ProcessingTimeMs:0.##} ms";
                 _logService.LogInfo(StatusMessage);
 
-                _navigateToResult?.Invoke(localResult.Result, localResult.UiAnnotatedImageBytes ?? Array.Empty<byte>(), detectionId);
+                _navigateToResult?.Invoke(localResult.Result, localResult.UiAnnotatedImageBytes ?? Array.Empty<byte>(), detectionId, resultPath, saveDir);
             }
             catch (Exception ex)
             {
@@ -824,7 +825,7 @@ namespace Client.ViewModels
             _navigateToSettings = navigateToSettings;
         }
 
-        public void SetNavigateToResult(Action<DetectionResult, byte[], long> navigateToResult)
+        public void SetNavigateToResult(Action<DetectionResult, byte[], long, string?, string?> navigateToResult)
         {
             _navigateToResult = navigateToResult;
         }

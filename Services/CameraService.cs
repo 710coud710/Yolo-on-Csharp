@@ -30,7 +30,7 @@ namespace Client.Services
             {
                 try
                 {
-                    // 1. Khởi tạo VideoCapture của OpenCV sử dụng backend DirectShow (Index 0)
+                    // 1. Khởi tạo VideoCapture của OpenCV sử dụng backend DirectShow (Index 0), MDSMF, DSHOW
                     _videoCapture = new VideoCapture(0, VideoCaptureAPIs.DSHOW);
                     
                     if (!_videoCapture.IsOpened())

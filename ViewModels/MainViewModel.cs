@@ -187,10 +187,10 @@ namespace Client.ViewModels
             NavigateToSettingsCommand = new RelayCommand(_ => NavigateTo("Settings"));
 
             DashboardViewModel.SetNavigateToSettings(() => NavigateTo("Settings"));
-            DashboardViewModel.SetNavigateToResult((result, bytes, detectionId) =>
+            DashboardViewModel.SetNavigateToResult((result, bytes, detectionId, resultPath, saveDir) =>
             {
                 var itemCode = DashboardViewModel.SelectedItem?.ItemCode ?? string.Empty;
-                ResultViewModel.LoadFromLocalResult(result, bytes, detectionId, itemCode);
+                ResultViewModel.LoadFromLocalResult(result, bytes, detectionId, itemCode, resultPath, saveDir);
                 CurrentViewModel = ResultViewModel;
             });
 
