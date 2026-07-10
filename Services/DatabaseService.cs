@@ -358,6 +358,53 @@ namespace Client.Services
             return (list, totalCount);
         }
 
+        public async Task<DbItem?> GetItemByIdAsync(int id)
+        {
+            string connString = GetConnectionString();
+            if (string.IsNullOrWhiteSpace(connString)) return null;
+
+            try
+            {
+                using (var connection = new SqlConnection(connString))
+                {
+                    await connection.OpenAsync();
+                    string query = @"
+                        SELECT i.id, i.class_id, i.item_code, i.item_name, i.item_type, i.is_active, 
+                               c.class_code, c.class_name
+                        FROM items i
+                        JOIN classes c ON i.class_id = c.id
+                        WHERE i.id = @Id";
+
+                    using (var cmd = new SqlCommand(query, connection))
+                    {
+                        cmd.Parameters.AddWithValue("@Id", id);
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                return new DbItem
+                                {
+                                    Id = reader.GetInt32(0),
+                                    ClassId = reader.GetInt32(1),
+                                    ItemCode = reader.GetString(2),
+                                    ItemName = reader.GetString(3),
+                                    ItemType = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
+                                    IsActive = reader.GetBoolean(5),
+                                    ClassCode = reader.GetInt32(6),
+                                    ClassName = reader.GetString(7)
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting item by ID {id}: {ex.Message}");
+            }
+            return null;
+        }
+
         public async Task<long> SaveDetectionResultAsync(DetectionResult result, DbItem selectedItem, string? rawImagePath, string? resultImagePath)
         {
             string connString = GetConnectionString();

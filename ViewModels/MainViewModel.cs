@@ -70,6 +70,17 @@ namespace Client.ViewModels
                     {
                         DashboardViewModel.SelectedItem = value;
                     }
+
+                    try
+                    {
+                        var settings = _settingsService.LoadSettings();
+                        settings.LastSelectedItemId = value?.Id;
+                        _settingsService.SaveSettings(settings);
+                    }
+                    catch (System.Exception ex)
+                    {
+                        _logService.LogError($"Failed to save selected item: {ex.Message}");
+                    }
                 }
             }
         }

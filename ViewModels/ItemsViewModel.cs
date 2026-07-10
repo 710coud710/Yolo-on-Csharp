@@ -405,6 +405,31 @@ namespace Client.ViewModels
             try
             {
                 var dbService = new DatabaseService(_settingsService);
+
+                // Khôi phục từ settings khi khởi động ứng dụng
+                if (_mainViewModel.SelectedItem == null)
+                {
+                    try
+                    {
+                        var settings = _settingsService.LoadSettings();
+                        if (settings.LastSelectedItemId.HasValue)
+                        {
+                            var savedItem = await dbService.GetItemByIdAsync(settings.LastSelectedItemId.Value);
+                            if (savedItem != null && savedItem.IsActive)
+                            {
+                                App.Current.Dispatcher.Invoke(() =>
+                                {
+                                    _mainViewModel.SelectedItem = savedItem;
+                                });
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error loading saved item from settings: {ex.Message}");
+                    }
+                }
+
                 var (itemsList, total) = await dbService.GetActiveItemsPagedAsync(SearchText, PageNumber, PageSize);
 
                 App.Current.Dispatcher.Invoke(() =>
@@ -428,9 +453,14 @@ namespace Client.ViewModels
                         {
                             _selectedItem = found;
                             _selectedRow = found;
-                            OnPropertyChanged(nameof(SelectedItem));
-                            OnPropertyChanged(nameof(SelectedRow));
                         }
+                        else
+                        {
+                            _selectedItem = _mainViewModel.SelectedItem;
+                            _selectedRow = null;
+                        }
+                        OnPropertyChanged(nameof(SelectedItem));
+                        OnPropertyChanged(nameof(SelectedRow));
                     }
                     
                     // Nếu chưa chọn item nào hoặc item đang chọn bị vô hiệu hóa, tự động chọn item hoạt động đầu tiên

@@ -8,6 +8,7 @@ namespace Client.Models
         public GeneralSettings General { get; set; }
         public List<int> SelectedClassIds { get; set; }
         public List<SelectedMaterialClassInfo> SelectedClasses { get; set; }
+        public int? LastSelectedItemId { get; set; }
 
         public AppSettings()
         {
@@ -17,6 +18,7 @@ namespace Client.Models
             General = new GeneralSettings();
             SelectedClassIds = new List<int>();
             SelectedClasses = new List<SelectedMaterialClassInfo>();
+            LastSelectedItemId = null;
             DatabaseConnectionString = string.Empty;
         }
 
