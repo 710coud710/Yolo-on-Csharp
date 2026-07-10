@@ -178,7 +178,8 @@ namespace Client.ViewModels
             DashboardViewModel.SetNavigateToSettings(() => NavigateTo("Settings"));
             DashboardViewModel.SetNavigateToResult((result, bytes, detectionId) =>
             {
-                ResultViewModel.LoadFromLocalResult(result, bytes, detectionId);
+                var itemCode = DashboardViewModel.SelectedItem?.ItemCode ?? string.Empty;
+                ResultViewModel.LoadFromLocalResult(result, bytes, detectionId, itemCode);
                 CurrentViewModel = ResultViewModel;
             });
 
@@ -203,6 +204,27 @@ namespace Client.ViewModels
 
         private void NavigateTo(string section)
         {
+            if (CurrentViewModel == ResultViewModel && ResultViewModel.IsConfirmationEnabled && ResultViewModel.StatusResult == "PENDING")
+            {
+                bool confirmBack = false;
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    var message = "Bạn chưa xác nhận kết quả Pass/Fail. Bạn có chắc chắn muốn quay lại không?";
+                    var dialog = new Client.Views.ItemSelectConfirmDialog(message, "Xác nhận quay lại", "Alert", "#FF9500");
+                    if (App.Current.MainWindow != null)
+                    {
+                        dialog.Owner = App.Current.MainWindow;
+                    }
+                    confirmBack = dialog.ShowDialog() == true;
+                });
+
+                if (!confirmBack)
+                {
+                    CurrentSection = "Dashboard";
+                    return;
+                }
+            }
+
             CurrentSection = section;
             if (section == "Settings")
             {

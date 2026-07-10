@@ -27,7 +27,8 @@
             
             <!-- Content Area -->
             <StackPanel Grid.Row="0" VerticalAlignment="Center" Margin="0,0,0,12">
-                <materialDesign:PackIcon Kind="HelpCircleOutline" 
+                <materialDesign:PackIcon x:Name="IconPack"
+                                         Kind="HelpCircleOutline" 
                                          Width="40" Height="40" 
                                          Foreground="#007AFF" 
                                          HorizontalAlignment="Center"

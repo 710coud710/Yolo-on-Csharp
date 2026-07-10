@@ -22,8 +22,22 @@ namespace Client.ViewModels
         private string _outputImageUrl;
         private bool _isLoading;
         private string _statusMessage;
-        private string _statusResult = "Pending";
+        private string _statusResult = "PENDING";
         private long _detectionId;
+        private string _itemCode = string.Empty;
+        private bool _isConfirmationEnabled;
+
+        public string ItemCode
+        {
+            get => _itemCode;
+            private set => SetProperty(ref _itemCode, value);
+        }
+
+        public bool IsConfirmationEnabled
+        {
+            get => _isConfirmationEnabled;
+            private set => SetProperty(ref _isConfirmationEnabled, value);
+        }
 
         public string StatusResult
         {
@@ -98,15 +112,17 @@ namespace Client.ViewModels
             _outputImageUrl = string.Empty;
             _statusMessage = "Ready";
 
-            BackCommand = new RelayCommand(_ => _navigateBack?.Invoke());
+            BackCommand = new RelayCommand(_ => HandleBack());
             PassCommand = new RelayCommand(async _ => await UpdateStatusAsync("Pass"));
             FailCommand = new RelayCommand(async _ => await UpdateStatusAsync("Fail"));
         }
 
-        public void LoadFromLocalResult(DetectionResult result, byte[]? annotatedImageBytes, long detectionId)
+        public void LoadFromLocalResult(DetectionResult result, byte[]? annotatedImageBytes, long detectionId, string itemCode)
         {
             _detectionId = detectionId;
-            StatusResult = "Pending";
+            StatusResult = "PENDING";
+            ItemCode = itemCode;
+            IsConfirmationEnabled = true;
             ImageId = (int)detectionId;
             MachineName = Environment.MachineName;
             TotalDetections = result.Count;
@@ -139,6 +155,8 @@ namespace Client.ViewModels
         {
             _detectionId = log.Id;
             StatusResult = log.Status;
+            ItemCode = log.ItemCode;
+            IsConfirmationEnabled = false;
             ImageId = log.Id;
             MachineName = log.MachineName;
             TotalDetections = log.TotalObjects;
@@ -204,10 +222,50 @@ namespace Client.ViewModels
             _navigateBack = navigateBack;
         }
 
+        private void HandleBack()
+        {
+            if (IsConfirmationEnabled && StatusResult == "PENDING")
+            {
+                bool confirmBack = false;
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    var message = "Bạn chưa xác nhận kết quả Pass/Fail. Bạn có chắc chắn muốn quay lại không?";
+                    var dialog = new Client.Views.ItemSelectConfirmDialog(message, "Xác nhận quay lại", "Alert", "#FF9500");
+                    if (App.Current.MainWindow != null)
+                    {
+                        dialog.Owner = App.Current.MainWindow;
+                    }
+                    confirmBack = dialog.ShowDialog() == true;
+                });
+
+                if (!confirmBack)
+                {
+                    return;
+                }
+            }
+
+            _navigateBack?.Invoke();
+        }
+
         private async Task UpdateStatusAsync(string newStatus)
         {
             if (_detectionId <= 0) return;
-            StatusResult = newStatus;
+
+            bool confirmSave = false;
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                var message = $"Bạn có chắc chắn muốn xác nhận kết quả là {newStatus.ToUpper()} không?";
+                var dialog = new Client.Views.ItemSelectConfirmDialog(message, "Xác nhận kết quả");
+                if (App.Current.MainWindow != null)
+                {
+                    dialog.Owner = App.Current.MainWindow;
+                }
+                confirmSave = dialog.ShowDialog() == true;
+            });
+
+            if (!confirmSave) return;
+
+            StatusResult = newStatus.ToUpper();
             StatusMessage = $"Updating status to {newStatus}...";
             try
             {
@@ -216,6 +274,8 @@ namespace Client.ViewModels
                 if (success)
                 {
                     StatusMessage = $"Status updated to {newStatus} successfully.";
+                    // Tự động quay lại dashboard sau khi xác nhận thành công
+                    _navigateBack?.Invoke();
                 }
                 else
                 {

@@ -14,6 +14,8 @@ namespace Client.Views
         {
             InitializeComponent();
             this.DataContextChanged += ResultView_DataContextChanged;
+            this.Focusable = true;
+            this.Loaded += (s, e) => this.Focus();
         }
 
         private void ResultView_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
