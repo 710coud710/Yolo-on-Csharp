@@ -630,9 +630,9 @@ namespace Client.Services
             }
         }
 
-        public async Task<List<MaterialClass>> GetModelsFromDbAsync()
+        public async Task<List<ModelClass>> GetModelsFromDbAsync()
         {
-            var list = new List<MaterialClass>();
+            var list = new List<ModelClass>();
             string connString = GetConnectionString();
             if (string.IsNullOrWhiteSpace(connString)) return list;
             try
@@ -640,21 +640,22 @@ namespace Client.Services
                 using (var connection = new SqlConnection(connString))
                 {
                     await connection.OpenAsync();
-                    string query = "SELECT id, model_code, model_name, model_path, description, created_at FROM models ORDER BY id";
+                    string query = "SELECT id, model_code, model_name, model_path, is_active, description, created_at FROM models ORDER BY id";
                     using (var cmd = new SqlCommand(query, connection))
                     {
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
                             while (await reader.ReadAsync())
                             {
-                                list.Add(new MaterialClass
+                                list.Add(new ModelClass
                                 {
                                     Id = reader.GetInt32(0),
-                                    MaterialCode = reader.GetString(1),
-                                    MaterialName = reader.GetString(2),
-                                    Label = reader.GetString(3),
-                                    Description = reader.IsDBNull(4) ? string.Empty : reader.GetString(4),
-                                    CreatedAt = reader.GetDateTime(5)
+                                    ModelCode = reader.GetString(1),
+                                    ModelName = reader.GetString(2),
+                                    ModelPath = reader.GetString(3),
+                                    IsActive = reader.GetBoolean(4),
+                                    Description = reader.IsDBNull(5) ? string.Empty : reader.GetString(5),
+                                    CreatedAt = reader.GetDateTime(6)
                                 });
                             }
                         }

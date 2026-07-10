@@ -16,13 +16,13 @@ namespace Client.ViewModels
         private readonly ModelManagerService _modelManager;
         private readonly ISettingsService _settingsService;
         private readonly ICameraService _cameraService;
-        private ObservableCollection<SelectableMaterialClass> _classes;
+        private ObservableCollection<SelectableModelClass> _classes;
         private string _statusMessage;
         private bool _isLoading;
         private int _selectedCount;
         private string _searchQuery;
 
-        public ObservableCollection<SelectableMaterialClass> Classes
+        public ObservableCollection<SelectableModelClass> Classes
         {
             get => _classes;
             set => SetProperty(ref _classes, value);
@@ -64,7 +64,7 @@ namespace Client.ViewModels
             _modelManager = modelManager;
             _settingsService = settingsService;
             _cameraService = cameraService;
-            _classes = new ObservableCollection<SelectableMaterialClass>();
+            _classes = new ObservableCollection<SelectableModelClass>();
             _statusMessage = "Ready";
             _searchQuery = string.Empty;
 
@@ -72,7 +72,7 @@ namespace Client.ViewModels
             RefreshClassesCommand = new RelayCommand(async _ => await LoadClasses());
             SelectModelCommand = new RelayCommand(obj =>
             {
-                if (obj is SelectableMaterialClass modelClass)
+                if (obj is SelectableModelClass modelClass)
                 {
                     _ = SelectModelAsync(modelClass);
                 }
@@ -103,23 +103,23 @@ namespace Client.ViewModels
                 // Chạy trên luồng phụ để tránh block UI
                 await Task.Run(() =>
                 {
-                    var items = new List<SelectableMaterialClass>();
+                    var items = new List<SelectableModelClass>();
 
                     foreach (var model in dbModels)
                     {
-                        bool isActive = string.Equals(model.Label, activeModelPath, StringComparison.OrdinalIgnoreCase)
-                                     || string.Equals(System.IO.Path.Combine(_modelManager.ModelsDir, model.Label), activeModelPath, StringComparison.OrdinalIgnoreCase);
+                        bool isActive = string.Equals(model.ModelPath, activeModelPath, StringComparison.OrdinalIgnoreCase)
+                                     || string.Equals(System.IO.Path.Combine(_modelManager.ModelsDir, model.ModelPath), activeModelPath, StringComparison.OrdinalIgnoreCase);
 
-                        bool isLocal = string.Equals(model.Label, "MockMode", StringComparison.OrdinalIgnoreCase);
+                        bool isLocal = string.Equals(model.ModelPath, "MockMode", StringComparison.OrdinalIgnoreCase);
                         if (!isLocal)
                         {
-                            string localPath = System.IO.Path.IsPathRooted(model.Label) 
-                                ? model.Label 
-                                : System.IO.Path.Combine(_modelManager.ModelsDir, model.Label);
+                            string localPath = System.IO.Path.IsPathRooted(model.ModelPath) 
+                                ? model.ModelPath 
+                                : System.IO.Path.Combine(_modelManager.ModelsDir, model.ModelPath);
                             isLocal = System.IO.File.Exists(localPath);
                         }
 
-                        items.Add(new SelectableMaterialClass(model, isActive) { IsLocal = isLocal });
+                        items.Add(new SelectableModelClass(model, isActive) { IsLocal = isLocal });
                     }
 
                     // Áp dụng bộ lọc tìm kiếm
@@ -127,8 +127,8 @@ namespace Client.ViewModels
                     {
                         var query = SearchQuery.Trim().ToLowerInvariant();
                         items = items.Where(x => 
-                            x.Label.ToLowerInvariant().Contains(query) || 
-                            x.MaterialCode.ToLowerInvariant().Contains(query) || 
+                            x.ModelPath.ToLowerInvariant().Contains(query) || 
+                            x.ModelCode.ToLowerInvariant().Contains(query) || 
                             x.Description.ToLowerInvariant().Contains(query)
                         ).ToList();
                     }
@@ -157,7 +157,7 @@ namespace Client.ViewModels
             }
         }
 
-        private async Task SelectModelAsync(SelectableMaterialClass modelClass)
+        private async Task SelectModelAsync(SelectableModelClass modelClass)
         {
             if (modelClass == null) return;
 
@@ -165,7 +165,7 @@ namespace Client.ViewModels
             bool restartNow = false;
             App.Current.Dispatcher.Invoke(() =>
             {
-                var message = $"Changing the active model to '{modelClass.Label}' requires a restart to take effect. Would you like to restart the application now?";
+                var message = $"Changing the active model to '{modelClass.ModelPath}' requires a restart to take effect. Would you like to restart the application now?";
                 var dialog = new Client.Views.ItemSelectConfirmDialog(message, "Restart Required");
                 if (App.Current.MainWindow != null)
                 {
@@ -176,7 +176,7 @@ namespace Client.ViewModels
 
             try
             {
-                StatusMessage = $"Activating model {modelClass.Label}...";
+                StatusMessage = $"Activating model {modelClass.ModelPath}...";
 
                 // 1. Mark this model as active (IsSelected = true) and others as false on the UI
                 foreach (var item in Classes)
@@ -186,7 +186,7 @@ namespace Client.ViewModels
                 UpdateSelectedCount();
 
                 // 2. Set active model config via manager
-                _modelManager.SetActiveModel(modelClass.MaterialCode, modelClass.Label);
+                _modelManager.SetActiveModel(modelClass.ModelCode, modelClass.ModelPath);
 
                 // 3. Save to database in background
                 await Task.Run(async () =>
@@ -231,7 +231,7 @@ namespace Client.ViewModels
                 }
                 else
                 {
-                    StatusMessage = $"Activated model: {modelClass.Label} successfully! Please restart the application later to apply changes.";
+                    StatusMessage = $"Activated model: {modelClass.ModelPath} successfully! Please restart the application later to apply changes.";
                 }
             }
             catch (Exception ex)

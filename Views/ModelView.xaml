@@ -45,7 +45,7 @@
                                  FontSize="13"
                                  Padding="0,0,10,0"
                                  Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 ToolTip="Search (label, material code, material name)"
+                                 ToolTip="Search (path, model code, model name)"
                                  materialDesign:TextFieldAssist.DecorationVisibility="Collapsed">
                             <TextBox.InputBindings>
                                 <KeyBinding Key="Enter"
@@ -208,17 +208,14 @@
                         <DataGridTextColumn Header="ID" 
                                              Binding="{Binding Id}" 
                                              Width="60"/>
-                        <DataGridTextColumn Header="Label" 
-                                             Binding="{Binding Label}" 
+                        <DataGridTextColumn Header="Path" 
+                                             Binding="{Binding ModelPath}" 
                                              Width="160"/>
-                        <DataGridTextColumn Header="Label ID" 
-                                             Binding="{Binding LabelId}" 
-                                             Width="90"/>
-                        <DataGridTextColumn Header="Material Code" 
-                                             Binding="{Binding MaterialCode}" 
+                        <DataGridTextColumn Header="Model Code" 
+                                             Binding="{Binding ModelCode}" 
                                              Width="140"/>
-                        <DataGridTextColumn Header="Material Name" 
-                                             Binding="{Binding MaterialName}" 
+                        <DataGridTextColumn Header="Model Name" 
+                                             Binding="{Binding ModelName}" 
                                              Width="*"
                                              MinWidth="100"/>
                         <DataGridTextColumn Header="Description" 

@@ -1,9 +1,10 @@
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace Client.Models
 {
-    public class SelectableMaterialClass : INotifyPropertyChanged
+    public class SelectableModelClass : INotifyPropertyChanged
     {
         private bool _isLocal = true;
         public bool IsLocal
@@ -20,7 +21,7 @@ namespace Client.Models
         }
 
         private bool _isSelected;
-        public MaterialClass MaterialClass { get; set; }
+        public ModelClass ModelClass { get; set; }
 
         public bool IsSelected
         {
@@ -35,23 +36,23 @@ namespace Client.Models
             }
         }
 
-        public int Id => MaterialClass?.Id ?? 0;
-        public string Label => MaterialClass?.Label ?? string.Empty;
-        public int LabelId => MaterialClass?.LabelId ?? 0;
-        public string MaterialCode => MaterialClass?.MaterialCode ?? string.Empty;
-        public string MaterialName => MaterialClass?.MaterialName ?? string.Empty;
-        public string Description => MaterialClass?.Description ?? string.Empty;
-        public DateTime CreatedAt => MaterialClass?.CreatedAt ?? DateTime.MinValue;
+        public int Id => ModelClass?.Id ?? 0;
+        public string ModelCode => ModelClass?.ModelCode ?? string.Empty;
+        public string ModelName => ModelClass?.ModelName ?? string.Empty;
+        public string ModelPath => ModelClass?.ModelPath ?? string.Empty;
+        public bool IsActive => ModelClass?.IsActive ?? false;
+        public string Description => ModelClass?.Description ?? string.Empty;
+        public DateTime CreatedAt => ModelClass?.CreatedAt ?? DateTime.MinValue;
 
-        public SelectableMaterialClass()
+        public SelectableModelClass()
         {
-            MaterialClass = new MaterialClass();
+            ModelClass = new ModelClass();
             _isSelected = false;
         }
 
-        public SelectableMaterialClass(MaterialClass materialClass, bool isSelected = false)
+        public SelectableModelClass(ModelClass modelClass, bool isSelected = false)
         {
-            MaterialClass = materialClass ?? new MaterialClass();
+            ModelClass = modelClass ?? new ModelClass();
             _isSelected = isSelected;
         }
 
