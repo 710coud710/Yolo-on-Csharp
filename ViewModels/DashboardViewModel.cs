@@ -744,6 +744,15 @@ namespace Client.ViewModels
                     settings.Camera.Fps = Fps;
                     settings.Camera.TestMode = TestMode;
 
+                    if (settings.General == null)
+                    {
+                        settings.General = new GeneralSettings();
+                    }
+                    settings.General.RoiX = RoiX;
+                    settings.General.RoiY = RoiY;
+                    settings.General.RoiWidth = RoiWidth;
+                    settings.General.RoiHeight = RoiHeight;
+
                     _settingsService.SaveSettings(settings);
                     StatusMessage = "Camera settings saved successfully!";
                     _logService.LogInfo("Camera settings saved successfully!");

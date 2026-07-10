@@ -640,57 +640,78 @@
 
                     <!-- Camera Settings Section -->
                     <StackPanel Grid.Row="1" Visibility="{Binding IsSettingsMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                        <!-- Camera IP Address -->
-                        <TextBlock Text="Camera IP Address:" 
-                                   Foreground="#8E8E93" 
-                                   FontSize="12"
-                                   FontWeight="Medium"
-                                   Margin="0,0,0,4"/>
-                        <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32" Margin="0,0,0,10">
-                            <TextBox Text="{Binding CameraIp, Mode=TwoWay}" 
-                                     Padding="8,0"
-                                     FontSize="12"
-                                     BorderThickness="0"
-                                     Background="Transparent"
-                                     VerticalContentAlignment="Center"
-                                     materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
-                        </Border>
-
-                        <!-- Trigger Mode -->
-                        <TextBlock Text="Trigger Mode:" 
-                                   Foreground="#8E8E93" 
-                                   FontSize="12"
-                                   FontWeight="Medium"
-                                   Margin="0,0,0,4"/>
-                        <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32" Margin="0,0,0,10">
-                            <ComboBox SelectedValue="{Binding TriggerMode, Mode=TwoWay}"
-                                      SelectedValuePath="Content"
-                                      Padding="8,0"
-                                      FontSize="12"
-                                      BorderThickness="0"
-                                      Background="Transparent"
-                                      VerticalContentAlignment="Center">
-                                <ComboBoxItem Content="Software"/>
-                                <ComboBoxItem Content="Hardware"/>
-                            </ComboBox>
-                        </Border>
-
                         <!-- Resolution & FPS Selection -->
                         <TextBlock Text="Resolution &amp; FPS:" 
                                    Foreground="#8E8E93" 
                                    FontSize="12"
                                    FontWeight="Medium"
                                    Margin="0,0,0,4"/>
-                        <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32" Margin="0,0,0,16">
+                        <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32" Margin="0,0,0,10">
                             <ComboBox ItemsSource="{Binding SupportedResolutions}"
-                                      SelectedItem="{Binding SelectedResolution, Mode=TwoWay}"
-                                      DisplayMemberPath="DisplayName"
-                                      Padding="8,0"
-                                      FontSize="12"
-                                      BorderThickness="0"
-                                      Background="Transparent"
-                                      VerticalContentAlignment="Center"/>
+                                       SelectedItem="{Binding SelectedResolution, Mode=TwoWay}"
+                                       DisplayMemberPath="DisplayName"
+                                       Padding="8,0"
+                                       FontSize="12"
+                                       BorderThickness="0"
+                                       Background="Transparent"
+                                       VerticalContentAlignment="Center"/>
                         </Border>
+
+                        <!-- ROI Region Settings -->
+                        <TextBlock Text="ROI Region:" 
+                                   Foreground="#8E8E93" 
+                                   FontSize="12"
+                                   FontWeight="Medium"
+                                   Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,0,16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- X and Y -->
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
+                                <TextBlock Text="X (%)" FontSize="11" Foreground="#8E8E93" Margin="0,0,0,2"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding RoiX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                             Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                             materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,8">
+                                <TextBlock Text="Y (%)" FontSize="11" Foreground="#8E8E93" Margin="0,0,0,2"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding RoiY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                             Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                             materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+                            
+                            <!-- Width and Height -->
+                            <StackPanel Grid.Row="1" Grid.Column="0">
+                                <TextBlock Text="Width (%)" FontSize="11" Foreground="#8E8E93" Margin="0,0,0,2"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding RoiWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                             Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                             materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+                            
+                            <StackPanel Grid.Row="1" Grid.Column="2">
+                                <TextBlock Text="Height (%)" FontSize="11" Foreground="#8E8E93" Margin="0,0,0,2"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding RoiHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                             Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                             materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
 
                         <!-- Save & Cancel Buttons -->
                         <Grid>

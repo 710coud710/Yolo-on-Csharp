@@ -52,40 +52,161 @@
     </UserControl.Resources>
 
     <Grid>
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.IsSharedSizeScope="True"
-                      Visibility="{Binding IsUnlocked, Converter={StaticResource BoolToVisibilityConverter}}">
-        <Grid Margin="16">
+        <!-- Unlocked Main Settings Layout -->
+        <Grid Visibility="{Binding IsUnlocked, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <TextBlock Grid.Row="0" 
-                        Text="Settings" 
-                        FontSize="22" 
-                        FontWeight="Bold" 
-                        Foreground="#1C1C1E"
-                        Margin="0,0,0,16"/>
+            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" Grid.IsSharedSizeScope="True">
+                <Grid Margin="16,16,16,8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-            <!-- Settings Content -->
-            <Grid Grid.Row="1" HorizontalAlignment="Stretch">
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0" 
+                               Text="Settings" 
+                               FontSize="22" 
+                               FontWeight="Bold" 
+                               Foreground="#1C1C1E"
+                               Margin="0,0,0,16"/>
+
+                    <!-- Settings Content -->
+                    <Grid Grid.Row="1" HorizontalAlignment="Stretch">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="10"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="10"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/> <!-- Row 0: General Settings -->
+                    <RowDefinition Height="10"/>   <!-- Row 1: Spacer -->
+                    <RowDefinition Height="Auto"/> <!-- Row 2: Model & Camera Config -->
+                    <RowDefinition Height="10"/>   <!-- Row 3: Spacer -->
+                    <RowDefinition Height="Auto"/> <!-- Row 4: Image Settings -->
+                    <RowDefinition Height="10"/>   <!-- Row 5: Spacer -->
+                    <RowDefinition Height="Auto"/> <!-- Row 6: Database & Security Settings -->
                 </Grid.RowDefinitions>
 
-                <!-- Left Column (Model & Database Settings) -->
-                <StackPanel Grid.Row="0" Grid.Column="0">
+                <!-- General Settings Card (Full width at the top) -->
+                <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                        Background="#FFFFFF"
+                        BorderBrush="#E5E5EA"
+                        BorderThickness="1"
+                        CornerRadius="16"
+                        Padding="20"
+                        Margin="0,0,0,0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
+                    </Border.Effect>
+                    <StackPanel>
+                        <TextBlock Text="General Settings" 
+                                   FontSize="16" 
+                                   FontWeight="Bold" 
+                                   Foreground="#1C1C1E"
+                                   Margin="0,0,0,16"/>
+                        
+                        <TextBlock Text="Model Process:" 
+                                   Foreground="#8E8E93" 
+                                   FontSize="13"
+                                   FontWeight="Medium"
+                                   Margin="0,0,0,6"/>
+                        <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
+                            <ComboBox SelectedValue="{Binding ModelProcess, Mode=TwoWay}"
+                                      SelectedValuePath="Content"
+                                      Padding="10,0"
+                                      FontSize="13"
+                                      BorderThickness="0"
+                                      Background="Transparent"
+                                      VerticalContentAlignment="Center">
+                                <ComboBoxItem Content="Capture"/>
+                                <ComboBoxItem Content="Stream"/>
+                            </ComboBox>
+                        </Border>
+
+                        <!-- All Class Toggle Switch -->
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Detect All Classes:" 
+                                           FontSize="13" 
+                                           FontWeight="Medium" 
+                                           Foreground="#8E8E93"/>
+                                <TextBlock Text="Detect all classes instead of selected item code" 
+                                           FontSize="11" 
+                                           Foreground="#C7C7CC"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <ToggleButton Grid.Column="1" 
+                                          Style="{StaticResource ToggleSwitchStyle}"
+                                          IsChecked="{Binding AllClass, Mode=TwoWay}"
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Separator Background="#E5E5EA" Margin="0,16,0,16"/>
+
+                        <TextBlock Text="Region of Interest (ROI) - Percentage (0% - 100%)" 
+                                   FontSize="14" 
+                                   FontWeight="SemiBold" 
+                                   Foreground="#1C1C1E"
+                                   Margin="0,0,0,12"/>
+
+                        <!-- Grid for ROI inputs (X, Y, Width, Height) -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="12"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- X -->
+                            <StackPanel Grid.Row="0" Grid.Column="0">
+                                <TextBlock Text="ROI X (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding RoiX, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Y -->
+                            <StackPanel Grid.Row="0" Grid.Column="2">
+                                <TextBlock Text="ROI Y (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding RoiY, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Width -->
+                            <StackPanel Grid.Row="2" Grid.Column="0">
+                                <TextBlock Text="ROI Width (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding RoiWidth, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Height -->
+                            <StackPanel Grid.Row="2" Grid.Column="2">
+                                <TextBlock Text="ROI Height (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
+                                <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
+                                    <TextBox Text="{Binding RoiHeight, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Left Column (Model Settings) -->
+                <StackPanel Grid.Row="2" Grid.Column="0">
                     <!-- AI Model Configuration Card -->
                     <Border Background="#FFFFFF"
                             BorderBrush="#E5E5EA"
@@ -103,21 +224,7 @@
                                        Foreground="#1C1C1E"
                                        Margin="0,0,0,16"/>
                             
-                            <TextBlock Text="Models Folder Directory:" 
-                                       Foreground="#8E8E93" 
-                                       FontSize="13"
-                                       FontWeight="Medium"
-                                       Margin="0,0,0,6"/>
-                            <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
-                                <TextBox Text="{Binding ModelsDirectory, Mode=TwoWay}" 
-                                         Padding="10,0"
-                                         FontSize="13"
-                                         BorderThickness="0"
-                                         Background="Transparent"
-                                         VerticalContentAlignment="Center"
-                                         materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
-                            </Border>
-                            
+                            <!-- Confidence Threshold -->
                             <TextBlock Text="Confidence Threshold (0.0 - 1.0):" 
                                        Foreground="#8E8E93" 
                                        FontSize="13"
@@ -132,7 +239,8 @@
                                          VerticalContentAlignment="Center"
                                          materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
                             </Border>
-                            
+
+                            <!-- IoU Threshold -->
                             <TextBlock Text="IoU Threshold (0.0 - 1.0):" 
                                        Foreground="#8E8E93" 
                                        FontSize="13"
@@ -147,54 +255,52 @@
                                          VerticalContentAlignment="Center"
                                          materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
                             </Border>
-                            
-                            <Separator Background="#E5E5EA" Margin="0,8,0,16"/>
 
-                            <!-- Use Letterbox Toggle Switch -->
+                            <!-- Letterbox Toggle Switch -->
                             <Grid Margin="0,0,0,16">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="Use Letterbox Preprocessing:" 
+                                    <TextBlock Text="Use Letterbox Resize:" 
                                                FontSize="13" 
                                                FontWeight="Medium" 
                                                Foreground="#8E8E93"/>
-                                    <TextBlock Text="Maintain aspect ratio and pad image (Recommended)" 
+                                    <TextBlock Text="Preserve aspect ratio of image during scaling" 
                                                FontSize="11" 
                                                Foreground="#C7C7CC"
                                                Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <ToggleButton Grid.Column="1" 
-                                               Style="{StaticResource ToggleSwitchStyle}"
-                                               IsChecked="{Binding UseLetterbox, Mode=TwoWay}"
-                                               VerticalAlignment="Center"/>
+                                              Style="{StaticResource ToggleSwitchStyle}"
+                                              IsChecked="{Binding UseLetterbox, Mode=TwoWay}"
+                                              VerticalAlignment="Center"/>
                             </Grid>
 
                             <!-- Enable Tiling Toggle Switch -->
-                            <Grid Margin="0,0,0,16">
+                            <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="Enable Tiling (Patch) Inference:" 
+                                    <TextBlock Text="Enable Image Tiling:" 
                                                FontSize="13" 
                                                FontWeight="Medium" 
                                                Foreground="#8E8E93"/>
-                                    <TextBlock Text="Split image into tiles for small objects detection" 
+                                    <TextBlock Text="Split image into tiles for processing" 
                                                FontSize="11" 
                                                Foreground="#C7C7CC"
                                                Margin="0,2,0,0"/>
                                 </StackPanel>
                                 <ToggleButton Grid.Column="1" 
-                                               Style="{StaticResource ToggleSwitchStyle}"
-                                               IsChecked="{Binding EnableTiling, Mode=TwoWay}"
-                                               VerticalAlignment="Center"/>
+                                              Style="{StaticResource ToggleSwitchStyle}"
+                                              IsChecked="{Binding EnableTiling, Mode=TwoWay}"
+                                              VerticalAlignment="Center"/>
                             </Grid>
 
-                            <!-- Tiling Overlap -->
+                            <!-- Tiling Overlap Ratio -->
                             <StackPanel Visibility="{Binding EnableTiling, Converter={StaticResource BoolToVisibilityConverter}}">
                                 <TextBlock Text="Tiling Overlap Ratio (0.0 - 0.5):" 
                                            Foreground="#8E8E93" 
@@ -203,22 +309,22 @@
                                            Margin="0,0,0,6"/>
                                 <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
                                     <TextBox Text="{Binding TilingOverlap, Mode=TwoWay}" 
-                                              Padding="10,0"
-                                              FontSize="13"
-                                              BorderThickness="0"
-                                              Background="Transparent"
-                                              VerticalContentAlignment="Center"
-                                              materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
+                                             Padding="10,0"
+                                             FontSize="13"
+                                             BorderThickness="0"
+                                             Background="Transparent"
+                                             VerticalContentAlignment="Center"
+                                             materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
                                 </Border>
                             </StackPanel>
 
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <Button Content="Scan Folder"
-                                        Command="{Binding ScanModelsCommand}"
-                                        Height="36"
-                                        Width="110"
-                                        Background="#007AFF"
-                                        Foreground="White"
+                            <!-- Reload AI Engine Button -->
+                            <!-- <StackPanel Margin="0,16,0,0">
+                                <Button Content="Reload AI Engine" 
+                                        Command="{Binding ReloadModelCommand}"
+                                        Height="38" 
+                                        Background="#007AFF" 
+                                        Foreground="White" 
                                         BorderThickness="0"
                                         FontWeight="SemiBold"
                                         Cursor="Hand">
@@ -228,8 +334,8 @@
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="Button">
                                                         <Border Background="{TemplateBinding Background}"
-                                                                CornerRadius="18"
-                                                                Padding="10,0">
+                                                                CornerRadius="19"
+                                                                Padding="16,0">
                                                             <ContentPresenter HorizontalAlignment="Center"
                                                                               VerticalAlignment="Center"/>
                                                         </Border>
@@ -244,126 +350,13 @@
                                         </Style>
                                     </Button.Style>
                                 </Button>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- General Settings Card -->
-                    <Border Background="#FFFFFF"
-                            BorderBrush="#E5E5EA"
-                            BorderThickness="1"
-                            CornerRadius="16"
-                            Padding="20"
-                            Margin="0,16,0,0">
-                        <Border.Effect>
-                            <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
-                        </Border.Effect>
-                        <StackPanel>
-                            <TextBlock Text="General Settings" 
-                                       FontSize="16" 
-                                       FontWeight="Bold" 
-                                       Foreground="#1C1C1E"
-                                       Margin="0,0,0,16"/>
-                            
-                            <TextBlock Text="Model Process:" 
-                                       Foreground="#8E8E93" 
-                                       FontSize="13"
-                                       FontWeight="Medium"
-                                       Margin="0,0,0,6"/>
-                            <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
-                                <ComboBox SelectedValue="{Binding ModelProcess, Mode=TwoWay}"
-                                          SelectedValuePath="Content"
-                                          Padding="10,0"
-                                          FontSize="13"
-                                          BorderThickness="0"
-                                          Background="Transparent"
-                                          VerticalContentAlignment="Center">
-                                    <ComboBoxItem Content="Capture"/>
-                                    <ComboBoxItem Content="Stream"/>
-                                </ComboBox>
-                            </Border>
-
-                            <!-- All Class Toggle Switch -->
-                            <Grid Margin="0,4,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <TextBlock Text="Detect All Classes:" 
-                                               FontSize="13" 
-                                               FontWeight="Medium" 
-                                               Foreground="#8E8E93"/>
-                                    <TextBlock Text="Detect all classes instead of selected item code" 
-                                               FontSize="11" 
-                                               Foreground="#C7C7CC"
-                                               Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <ToggleButton Grid.Column="1" 
-                                              Style="{StaticResource ToggleSwitchStyle}"
-                                              IsChecked="{Binding AllClass, Mode=TwoWay}"
-                                              VerticalAlignment="Center"/>
-                            </Grid>
-
-                            <Separator Background="#E5E5EA" Margin="0,16,0,16"/>
-
-                            <TextBlock Text="Region of Interest (ROI) - Percentage (0% - 100%)" 
-                                       FontSize="14" 
-                                       FontWeight="SemiBold" 
-                                       Foreground="#1C1C1E"
-                                       Margin="0,0,0,12"/>
-
-                            <!-- Grid for ROI inputs (X, Y, Width, Height) -->
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="12"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="12"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-
-                                <!-- X -->
-                                <StackPanel Grid.Row="0" Grid.Column="0">
-                                    <TextBlock Text="ROI X (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
-                                    <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
-                                        <TextBox Text="{Binding RoiX, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
-                                    </Border>
-                                </StackPanel>
-
-                                <!-- Y -->
-                                <StackPanel Grid.Row="0" Grid.Column="2">
-                                    <TextBlock Text="ROI Y (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
-                                    <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
-                                        <TextBox Text="{Binding RoiY, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
-                                    </Border>
-                                </StackPanel>
-
-                                <!-- Width -->
-                                <StackPanel Grid.Row="2" Grid.Column="0">
-                                    <TextBlock Text="ROI Width (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
-                                    <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
-                                        <TextBox Text="{Binding RoiWidth, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
-                                    </Border>
-                                </StackPanel>
-
-                                <!-- Height -->
-                                <StackPanel Grid.Row="2" Grid.Column="2">
-                                    <TextBlock Text="ROI Height (%):" Foreground="#8E8E93" FontSize="12" FontWeight="Medium" Margin="0,0,0,4"/>
-                                    <Border CornerRadius="8" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="32">
-                                        <TextBox Text="{Binding RoiHeight, Mode=TwoWay}" Padding="8,0" FontSize="12" BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center" materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
-                                    </Border>
-                                </StackPanel>
-                            </Grid>
+                            </StackPanel> -->
                         </StackPanel>
                     </Border>
                 </StackPanel>
 
                 <!-- Camera Settings Card (Right) -->
-                <Border Grid.Row="0" Grid.Column="2"
+                <Border Grid.Row="2" Grid.Column="2"
                         Background="#FFFFFF"
                         BorderBrush="#E5E5EA"
                         BorderThickness="1"
@@ -379,13 +372,14 @@
                                    Foreground="#1C1C1E"
                                    Margin="0,0,0,16"/>
                         
+                        <!-- Camera IP Address -->
                         <TextBlock Text="Camera IP Address:" 
                                    Foreground="#8E8E93" 
                                    FontSize="13"
                                    FontWeight="Medium"
                                    Margin="0,0,0,6"/>
                         <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
-                            <TextBox Text="{Binding CameraIp, Mode=TwoWay}" 
+                            <TextBox Text="{Binding CameraIpAddress, Mode=TwoWay}" 
                                      Padding="10,0"
                                      FontSize="13"
                                      BorderThickness="0"
@@ -393,14 +387,16 @@
                                      VerticalContentAlignment="Center"
                                      materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
                         </Border>
-                        
+
+                        <!-- Trigger Mode Selector -->
                         <TextBlock Text="Trigger Mode:" 
                                    Foreground="#8E8E93" 
                                    FontSize="13"
                                    FontWeight="Medium"
                                    Margin="0,0,0,6"/>
                         <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
-                            <ComboBox SelectedItem="{Binding TriggerMode, Mode=TwoWay}"
+                            <ComboBox SelectedValue="{Binding TriggerMode, Mode=TwoWay}"
+                                      SelectedValuePath="Content"
                                       Padding="10,0"
                                       FontSize="13"
                                       BorderThickness="0"
@@ -410,13 +406,14 @@
                                 <ComboBoxItem Content="Hardware"/>
                             </ComboBox>
                         </Border>
-                        
-                        <TextBlock Text="Resolution &amp; FPS:" 
+
+                        <!-- Camera Resolution Selector -->
+                        <TextBlock Text="Camera Resolution &amp; Frame Rate:" 
                                    Foreground="#8E8E93" 
                                    FontSize="13"
                                    FontWeight="Medium"
                                    Margin="0,0,0,6"/>
-                        <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36">
+                        <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
                             <ComboBox ItemsSource="{Binding SupportedResolutions}"
                                       SelectedItem="{Binding SelectedResolution, Mode=TwoWay}"
                                       DisplayMemberPath="DisplayName"
@@ -426,7 +423,7 @@
                                       Background="Transparent"
                                       VerticalContentAlignment="Center"/>
                         </Border>
-                        
+
                         <!-- Test Mode Toggle Switch -->
                         <Grid Margin="0,16,0,0">
                             <Grid.ColumnDefinitions>
@@ -452,7 +449,7 @@
                 </Border>
 
                 <!-- Image Settings Card (Full width) -->
-                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
                         Background="#FFFFFF"
                         BorderBrush="#E5E5EA"
                         BorderThickness="1"
@@ -584,7 +581,7 @@
                 </Border>
 
                 <!-- Database & Security Settings Card (Full width) -->
-                <Border Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
+                <Border Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3"
                         Background="#FFFFFF"
                         BorderBrush="#E5E5EA"
                         BorderThickness="1"
@@ -774,19 +771,16 @@
                         </Grid>
                     </StackPanel>
                 </Border>
-            </Grid>
+                    </Grid>
+                </Grid>
+            </ScrollViewer>
 
-            <!-- Bottom Action Footer Card -->
-            <Border Grid.Row="2" 
+            <!-- Sticky Bottom Action Footer Bar -->
+            <Border Grid.Row="1" 
                     Background="#FFFFFF" 
                     BorderBrush="#E5E5EA" 
-                    BorderThickness="1" 
-                    CornerRadius="16" 
-                    Padding="16,12" 
-                    Margin="0,16,0,0">
-                <Border.Effect>
-                    <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.04"/>
-                </Border.Effect>
+                    BorderThickness="0,1,0,0" 
+                    Padding="20,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -871,7 +865,6 @@
                 </Grid>
             </Border>
         </Grid>
-    </ScrollViewer>
 
         <!-- Locked Overlay Gate -->
         <Border Background="#F2F2F7"

@@ -26,17 +26,17 @@ namespace Client.Services
             // Ensure collection is updated on UI thread
             if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
             {
-                Application.Current.Dispatcher.Invoke(() => Entries.Add(line));
+                Application.Current.Dispatcher.Invoke(() => Entries.Insert(0, line));
             }
             else
             {
-                Entries.Add(line);
+                Entries.Insert(0, line);
             }
 
             // Prevent unbounded growth (keep last 500 lines)
             while (Entries.Count > 500)
             {
-                Entries.RemoveAt(0);
+                Entries.RemoveAt(Entries.Count - 1);
             }
         }
     }
