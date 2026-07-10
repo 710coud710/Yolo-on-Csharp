@@ -93,7 +93,6 @@ namespace Client.ViewModels
 
         public ICommand ToggleSidebarCommand { get; }
         public ICommand NavigateToDashboardCommand { get; }
-        public ICommand NavigateToResultCommand { get; }
         public ICommand NavigateToItemsCommand { get; }
         public ICommand NavigateToModelCommand { get; }
         public ICommand NavigateToHistoryCommand { get; }
@@ -171,7 +170,6 @@ namespace Client.ViewModels
 
             ToggleSidebarCommand = new RelayCommand(_ => IsSidebarOpen = !IsSidebarOpen);
             NavigateToDashboardCommand = new RelayCommand(_ => NavigateTo("Dashboard"));
-            NavigateToResultCommand = new RelayCommand(_ => NavigateTo("Result"));
             NavigateToItemsCommand = new RelayCommand(_ => NavigateTo("Items"));
             NavigateToModelCommand = new RelayCommand(_ => NavigateTo("Model"));
             NavigateToHistoryCommand = new RelayCommand(_ => NavigateTo("History"));
@@ -180,16 +178,26 @@ namespace Client.ViewModels
             DashboardViewModel.SetNavigateToSettings(() => NavigateTo("Settings"));
             DashboardViewModel.SetNavigateToResult((result, bytes) =>
             {
-                NavigateTo("Result");
                 ResultViewModel.LoadFromLocalResult(result, bytes);
+                CurrentViewModel = ResultViewModel;
             });
 
-            ResultViewModel.SetNavigateBack(() => NavigateTo("Dashboard"));
+            ResultViewModel.SetNavigateBack(() =>
+            {
+                if (CurrentSection == "History")
+                {
+                    CurrentViewModel = HistoryViewModel;
+                }
+                else
+                {
+                    CurrentViewModel = DashboardViewModel;
+                }
+            });
             
             HistoryViewModel.SetNavigateToResult((log) =>
             {
-                NavigateTo("Result");
                 ResultViewModel.LoadFromHistoryLog(log, _settingsService);
+                CurrentViewModel = ResultViewModel;
             });
         }
 
