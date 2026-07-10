@@ -490,15 +490,31 @@ namespace Client.ViewModels
                             saveDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, saveDir);
                         }
 
+                        var now = DateTime.Now;
+                        string yearStr = now.ToString("yyyy");
+                        string monthStr = now.ToString("MM");
+                        string dayStr = now.ToString("dd");
+                        string timeStr = now.ToString("HHmmss");
+
+                        string modelCode = !string.IsNullOrWhiteSpace(_detector.CurrentModelPath) 
+                            ? System.IO.Path.GetFileNameWithoutExtension(_detector.CurrentModelPath) 
+                            : "UnknownModel";
+                        if (string.IsNullOrWhiteSpace(modelCode)) modelCode = "UnknownModel";
+
+                        string itemCode = !string.IsNullOrWhiteSpace(dbItemToSave?.ItemCode) 
+                            ? dbItemToSave.ItemCode 
+                            : "UnknownItem";
+
                         var rawFolder = System.IO.Path.Combine(saveDir, "Raw");
-                        var resultFolder = System.IO.Path.Combine(saveDir, "Result");
+                        var resultFolder = System.IO.Path.Combine(saveDir, "Result", modelCode, yearStr, monthStr, dayStr);
 
                         if (!System.IO.Directory.Exists(rawFolder)) System.IO.Directory.CreateDirectory(rawFolder);
                         if (!System.IO.Directory.Exists(resultFolder)) System.IO.Directory.CreateDirectory(resultFolder);
 
-                        var filename = $"{DateTime.Now:yyyyMMdd_HHmmssfff}.jpg";
-                        var fullRawPath = System.IO.Path.Combine(rawFolder, filename);
-                        var fullResultPath = System.IO.Path.Combine(resultFolder, filename);
+                        var filenameRaw = $"{itemCode}_{timeStr}.jpg";
+                        var filenameResult = $"{itemCode}_{timeStr}.jpg";
+                        var fullRawPath = System.IO.Path.Combine(rawFolder, filenameRaw);
+                        var fullResultPath = System.IO.Path.Combine(resultFolder, filenameResult);
 
                         System.IO.File.WriteAllBytes(fullRawPath, imageData);
                         if (localResult.AnnotatedImageBytes != null)
@@ -507,8 +523,8 @@ namespace Client.ViewModels
                         }
 
                         // Save relative paths to database
-                        rawPath = $"\\Raw\\{filename}";
-                        resultPath = $"\\Result\\{filename}";
+                        rawPath = $"\\Raw\\{filenameRaw}";
+                        resultPath = $"\\Result\\{modelCode}\\{yearStr}\\{monthStr}\\{dayStr}\\{filenameResult}";
                         localResult.Result.ImagePath = resultPath; // Keep compatibility
 
                         _logService.LogInfo($"Saved raw image: {fullRawPath} and result image: {fullResultPath}");
