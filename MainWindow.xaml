@@ -15,6 +15,7 @@
         Background="#F2F2F7">
     
     <Window.Resources>
+        <!-- <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/> -->
         <converters:ViewModelToViewConverter x:Key="ViewModelToViewConverter"/>
         <converters:EqualsConverter x:Key="EqualsConverter"/>
         
@@ -327,6 +328,12 @@
             </Grid>
         </Border>
 
+        <!-- Sidebar Overlay to block clicks when Add Item is open -->
+        <!-- <Border Grid.Column="0"
+                Background="#66000000"
+                Visibility="{Binding ItemsViewModel.IsAddFormOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"
+                Panel.ZIndex="100"/> -->
+
         <!-- Main Content Area -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
@@ -422,6 +429,12 @@
                     </StackPanel>
                 </Grid>
             </Border>
+
+            <!-- Top Bar Overlay to block clicks when Add Item is open -->
+            <!-- <Border Grid.Row="0"
+                    Background="#66000000"
+                    Visibility="{Binding ItemsViewModel.IsAddFormOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"
+                    Panel.ZIndex="100"/> -->
 
             <!-- Content Area -->
             <ContentControl Grid.Row="1" 

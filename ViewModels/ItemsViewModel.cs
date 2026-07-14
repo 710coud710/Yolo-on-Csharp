@@ -25,6 +25,9 @@ namespace Client.ViewModels
         private int _totalCount = 0;
         private int _pageSize = 100;
 
+        private bool _showHiddenItems;
+        private bool _isManageMenuOpen;
+
         // Các thuộc tính phục vụ Form Thêm mới Item
         private bool _isAddFormOpen;
         private ObservableCollection<DbClass> _availableClasses = new();
@@ -110,6 +113,25 @@ namespace Client.ViewModels
         public bool CanGoPrev => PageNumber > 1;
         public bool CanGoNext => PageNumber < TotalPages;
 
+        public bool ShowHiddenItems
+        {
+            get => _showHiddenItems;
+            set
+            {
+                if (SetProperty(ref _showHiddenItems, value))
+                {
+                    PageNumber = 1;
+                    Task.Run(async () => await LoadItemsAsync());
+                }
+            }
+        }
+
+        public bool IsManageMenuOpen
+        {
+            get => _isManageMenuOpen;
+            set => SetProperty(ref _isManageMenuOpen, value);
+        }
+
         // Các thuộc tính Binding cho Form Thêm mới
         public bool IsAddFormOpen
         {
@@ -165,6 +187,7 @@ namespace Client.ViewModels
         public ICommand SubmitAddItemCommand { get; }
         public ICommand ConfirmSelectItemCommand { get; }
         public ICommand ConfirmToggleItemActiveCommand { get; }
+        public ICommand ToggleManageMenuCommand { get; }
 
         public ItemsViewModel(MainViewModel mainViewModel, ISettingsService settingsService)
         {
@@ -172,6 +195,11 @@ namespace Client.ViewModels
             _settingsService = settingsService;
             _items = new ObservableCollection<DbItem>();
             _statusMessage = "Ready";
+
+            ToggleManageMenuCommand = new RelayCommand(_ =>
+            {
+                IsManageMenuOpen = !IsManageMenuOpen;
+            });
 
             RefreshCommand = new RelayCommand(async _ =>
             {
@@ -225,6 +253,27 @@ namespace Client.ViewModels
                 if (param is DbItem item)
                 {
                     bool currentActive = item.IsActive;
+
+                    // Không thể disable item đang được chọn
+                    if (currentActive && _mainViewModel.SelectedItem?.Id == item.Id)
+                    {
+                        App.Current.Dispatcher.Invoke(() =>
+                        {
+                            var dialog = new Client.Views.ItemSelectConfirmDialog(
+                                "Cannot disable the currently selected item. Please select another item first.",
+                                "Warning",
+                                "Alert",
+                                "#FF9500");
+                            dialog.SetAlertMode("OK");
+                            if (App.Current.MainWindow != null)
+                            {
+                                dialog.Owner = App.Current.MainWindow;
+                            }
+                            dialog.ShowDialog();
+                        });
+                        return;
+                    }
+
                     string actionText = currentActive ? "disable" : "enable";
 
                     bool confirmed = false;
@@ -248,18 +297,34 @@ namespace Client.ViewModels
                             bool success = await dbService.UpdateItemActiveStatusAsync(item.Id, !currentActive);
                             if (success)
                             {
-                                // Nếu Item bị disable trùng với Item đang chọn, xóa lựa chọn
-                                if (currentActive && _mainViewModel.SelectedItem?.Id == item.Id)
-                                {
-                                    _mainViewModel.SelectedItem = null;
-                                    _selectedItem = null;
-                                    _selectedRow = null;
-                                    OnPropertyChanged(nameof(SelectedItem));
-                                    OnPropertyChanged(nameof(SelectedRow));
-                                }
-
                                 StatusMessage = $"{(currentActive ? "Disabled" : "Enabled")} item '{item.ItemCode}' successfully.";
-                                await LoadItemsAsync();
+                                
+                                App.Current.Dispatcher.Invoke(() =>
+                                {
+                                    if (currentActive && !ShowHiddenItems)
+                                    {
+                                        // Xóa khỏi danh sách Items hiển thị để biến mất ngay lập tức ko cần load lại
+                                        int indexInList = Items.IndexOf(item);
+                                        if (indexInList >= 0)
+                                        {
+                                            Items.RemoveAt(indexInList);
+                                            
+                                            // Cập nhật lại số thứ tự (Index) của các item còn lại phía sau
+                                            int startIdx = (PageNumber - 1) * PageSize + 1;
+                                            for (int i = indexInList; i < Items.Count; i++)
+                                            {
+                                                Items[i].Index = startIdx + i;
+                                            }
+                                            
+                                            TotalCount--;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Nếu hiển thị cả hidden hoặc là Enable lên, chỉ cần cập nhật trạng thái IsActive tại chỗ ko cần load lại
+                                        item.IsActive = !currentActive;
+                                    }
+                                });
                             }
                             else
                             {
@@ -430,7 +495,7 @@ namespace Client.ViewModels
                     }
                 }
 
-                var (itemsList, total) = await dbService.GetActiveItemsPagedAsync(SearchText, PageNumber, PageSize);
+                var (itemsList, total) = await dbService.GetActiveItemsPagedAsync(SearchText, PageNumber, PageSize, ShowHiddenItems);
 
                 App.Current.Dispatcher.Invoke(() =>
                 {

@@ -114,7 +114,7 @@
                                    FontSize="13"
                                    FontWeight="Medium"
                                    Margin="0,0,0,6"/>
-                        <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Margin="0,0,0,16">
+                        <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Width="300" HorizontalAlignment="Left" Margin="0,0,0,16">
                             <ComboBox SelectedValue="{Binding ModelProcess, Mode=TwoWay}"
                                       SelectedValuePath="Content"
                                       Padding="10,0"
@@ -279,7 +279,7 @@
                             </Grid>
 
                             <!-- Enable Tiling Toggle Switch -->
-                            <Grid Margin="0,0,0,12">
+                            <!-- <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
@@ -298,7 +298,7 @@
                                               Style="{StaticResource ToggleSwitchStyle}"
                                               IsChecked="{Binding EnableTiling, Mode=TwoWay}"
                                               VerticalAlignment="Center"/>
-                            </Grid>
+                            </Grid> -->
 
                             <!-- Tiling Overlap Ratio -->
                             <StackPanel Visibility="{Binding EnableTiling, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -373,7 +373,7 @@
                                    Margin="0,0,0,16"/>
                         
                         <!-- Camera IP Address -->
-                        <TextBlock Text="Camera IP Address:" 
+                        <!-- <TextBlock Text="Camera IP Address:" 
                                    Foreground="#8E8E93" 
                                    FontSize="13"
                                    FontWeight="Medium"
@@ -386,10 +386,10 @@
                                      Background="Transparent"
                                      VerticalContentAlignment="Center"
                                      materialDesign:TextFieldAssist.DecorationVisibility="Collapsed"/>
-                        </Border>
+                        </Border> -->
 
                         <!-- Trigger Mode Selector -->
-                        <TextBlock Text="Trigger Mode:" 
+                        <!-- <TextBlock Text="Trigger Mode:" 
                                    Foreground="#8E8E93" 
                                    FontSize="13"
                                    FontWeight="Medium"
@@ -405,7 +405,7 @@
                                 <ComboBoxItem Content="Software"/>
                                 <ComboBoxItem Content="Hardware"/>
                             </ComboBox>
-                        </Border>
+                        </Border> -->
 
                         <!-- Camera Resolution Selector -->
                         <TextBlock Text="Camera Resolution &amp; Frame Rate:" 
@@ -565,7 +565,7 @@
                                    FontSize="13"
                                    FontWeight="Medium"
                                    Margin="0,0,0,6"/>
-                        <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36">
+                        <Border CornerRadius="10" BorderThickness="1" BorderBrush="#E5E5EA" Background="White" Height="36" Width="150" HorizontalAlignment="Left" Margin="0,0,0,16">
                             <ComboBox SelectedValue="{Binding SaveMode, Mode=TwoWay}"
                                       SelectedValuePath="Content"
                                       Padding="10,0"
@@ -780,7 +780,7 @@
                     Background="#FFFFFF" 
                     BorderBrush="#E5E5EA" 
                     BorderThickness="0,1,0,0" 
-                    Padding="20,12">
+                    Padding="20,7">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>

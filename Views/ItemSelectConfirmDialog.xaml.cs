@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 
 namespace Client.Views
 {
@@ -38,6 +39,14 @@ namespace Client.Views
             {
                 IconPack.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Orange);
             }
+        }
+
+        public void SetAlertMode(string confirmButtonText = "OK")
+        {
+            BtnCancel.Visibility = Visibility.Collapsed;
+            BtnConfirm.Content = confirmButtonText;
+            Grid.SetColumn(BtnConfirm, 0);
+            Grid.SetColumnSpan(BtnConfirm, 3);
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)

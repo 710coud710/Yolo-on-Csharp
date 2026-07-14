@@ -278,7 +278,7 @@ namespace Client.Services
             return list;
         }
 
-        public async Task<(List<DbItem> Items, int TotalCount)> GetActiveItemsPagedAsync(string? searchText, int pageNumber, int pageSize = 100)
+        public async Task<(List<DbItem> Items, int TotalCount)> GetActiveItemsPagedAsync(string? searchText, int pageNumber, int pageSize = 100, bool includeInactive = false)
         {
             var list = new List<DbItem>();
             int totalCount = 0;
@@ -292,8 +292,12 @@ namespace Client.Services
                 {
                     await connection.OpenAsync();
 
-                    // Xây dựng mệnh đề WHERE lọc tìm kiếm (Tải tất cả active và inactive)
+                    // Xây dựng mệnh đề WHERE lọc tìm kiếm
                     string whereClause = "WHERE 1 = 1";
+                    if (!includeInactive)
+                    {
+                        whereClause += " AND i.is_active = 1";
+                    }
                     if (!string.IsNullOrWhiteSpace(searchText))
                     {
                         whereClause += " AND (i.item_code LIKE @SearchPattern OR i.item_name LIKE @SearchPattern)";

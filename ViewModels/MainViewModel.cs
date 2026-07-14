@@ -215,6 +215,15 @@ namespace Client.ViewModels
 
         private void NavigateTo(string section)
         {
+            // Block navigation to other tabs if Add Item form is currently open
+            if (section != "Items" && ItemsViewModel != null && ItemsViewModel.IsAddFormOpen)
+            {
+                // System.Windows.MessageBox.Show("Vui lòng đóng bảng thêm mới (Add Item) trước khi chuyển tab.", "Thông báo", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                _currentSection = "Items";
+                OnPropertyChanged(nameof(CurrentSection));
+                return;
+            }
+
             if (CurrentViewModel == ResultViewModel && ResultViewModel.IsConfirmationEnabled && ResultViewModel.StatusResult == "PENDING")
             {
                 bool confirmBack = false;

@@ -56,7 +56,8 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 
-                <Button Grid.Column="0" 
+                <Button x:Name="BtnCancel"
+                        Grid.Column="0" 
                         Content="Cancel" 
                         Click="Cancel_Click"
                         Height="40" 
@@ -85,7 +86,8 @@
                     </Button.Style>
                 </Button>
                 
-                <Button Grid.Column="2" 
+                <Button x:Name="BtnConfirm"
+                        Grid.Column="2" 
                         Content="Confirm" 
                         Click="Confirm_Click"
                         Height="40" 

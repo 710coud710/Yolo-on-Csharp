@@ -105,44 +105,145 @@
             
             <!-- Actions -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <!-- Add Item -->
-                <Button Command="{Binding OpenAddFormCommand}"
-                        Width="110"
-                        Height="36"
-                        Background="#34C759"
-                        Foreground="White"
-                        BorderThickness="0"
-                        FontWeight="SemiBold"
-                        Cursor="Hand"
-                        Margin="0,0,10,0">
-                    <Button.Content>
-                        <StackPanel Orientation="Horizontal">
-                            <materialDesign:PackIcon Kind="Plus" Width="18" Height="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Add Item" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button.Content>
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}"
-                                                CornerRadius="18"
-                                                Padding="10,0">
-                                            <ContentPresenter HorizontalAlignment="Center"
-                                                              VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#2EB852"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                <!-- Manage Dropdown -->
+                <Grid Margin="0,0,10,0">
+                    <Button x:Name="ManageButton"
+                            Width="120"
+                            Height="36"
+                            Background="#34C759"
+                            Foreground="White"
+                            BorderThickness="0"
+                            FontWeight="SemiBold"
+                            Cursor="Hand">
+                        <Button.Content>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Cog" Width="18" Height="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Manage" VerticalAlignment="Center"/>
+                                <materialDesign:PackIcon Kind="ChevronDown" Width="16" Height="16" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button.Content>
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="18"
+                                                    Padding="10,0">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#2EB852"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                        <Button.ContextMenu>
+                            <ContextMenu MinWidth="195">
+                                <ContextMenu.Resources>
+                                    <!-- ContextMenu custom style for rounded corners, shadow, and nice border -->
+                                    <Style TargetType="ContextMenu">
+                                        <Setter Property="OverridesDefaultStyle" Value="True"/>
+                                        <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+                                        <Setter Property="HasDropShadow" Value="True"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ContextMenu">
+                                                    <Border Background="#FFFFFF" 
+                                                            BorderBrush="#E5E5EA" 
+                                                            BorderThickness="1" 
+                                                            CornerRadius="12" 
+                                                            Padding="4">
+                                                        <Border.Effect>
+                                                            <DropShadowEffect BlurRadius="12" ShadowDepth="2" Color="Black" Opacity="0.08"/>
+                                                        </Border.Effect>
+                                                        <ItemsPresenter KeyboardNavigation.TabNavigation="Cycle"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+
+                                    <!-- MenuItem custom style for rounded corners highlight, icons, checkmark and padding -->
+                                    <Style TargetType="MenuItem">
+                                        <Setter Property="Height" Value="36"/>
+                                        <Setter Property="FontSize" Value="13"/>
+                                        <Setter Property="FontWeight" Value="Medium"/>
+                                        <Setter Property="Foreground" Value="#1C1C1E"/>
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="MenuItem">
+                                                    <Border x:Name="BgBorder" Background="Transparent" CornerRadius="8" Margin="2,1">
+                                                        <Grid SnapsToDevicePixels="True">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="34" SharedSizeGroup="Icon"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="30" SharedSizeGroup="Check"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            
+                                                            <ContentPresenter x:Name="IconPresenter" Grid.Column="0" ContentSource="Icon" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            
+                                                            <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center" Margin="2,0,10,0"/>
+                                                            
+                                                            <!-- CheckMark for checkable item -->
+                                                            <Path x:Name="CheckMark" Grid.Column="2" 
+                                                                  Data="M 0,3 L 3,6 L 8,0" 
+                                                                  Stroke="#34C759" StrokeThickness="2.2" 
+                                                                  Width="9" Height="7" 
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"
+                                                                  Visibility="Collapsed"/>
+                                                        </Grid>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="BgBorder" Property="Background" Value="#F2F2F7"/>
+                                                            <Setter Property="Foreground" Value="#1C1C1E"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsChecked" Value="True">
+                                                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+
+                                    <!-- Separator custom style -->
+                                    <Style TargetType="Separator">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Separator">
+                                                    <Border Height="1" Background="#E5E5EA" Margin="6,4"/>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ContextMenu.Resources>
+
+                                <MenuItem Header="Add New Item" Command="{Binding OpenAddFormCommand}">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="Plus" Width="18" Height="18" Foreground="#34C759"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="Show Disabled Items" 
+                                          IsCheckable="True" 
+                                          IsChecked="{Binding ShowHiddenItems, Mode=TwoWay}"
+                                          StaysOpenOnClick="True">
+                                    <MenuItem.Icon>
+                                        <materialDesign:PackIcon Kind="EyeOff" Width="18" Height="18" Foreground="#8E8E93"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                </Grid>
 
                 <!-- Refresh -->
                 <Button Command="{Binding RefreshCommand}"
