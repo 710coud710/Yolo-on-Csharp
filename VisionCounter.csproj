@@ -7,13 +7,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	<!--Signing.-->
+	<!--<SignAssembly>true</SignAssembly>--> 
 
-    <!-- Version Patch.Minor.Major --> 
-    <Version>1.0.0.8</Version>
+	<!-- Version Major.Minor.Patch.Build --> 
+    <Version>1.0.0.9</Version>
 	<!-- Thay đổi khi thay đổi logic, phá vỡ logic cũ -->
 	<AssemblyVersion>1.0.0.0</AssemblyVersion> 
-	<!--version của bản build đang chạy, cấu trúc Patch.Minor.Major.Build-->
-    <FileVersion>1.0.0.8</FileVersion>
+	<!--version của bản build đang chạy, cấu trúc Major.Minor.Patch.Build-->
+    <FileVersion>1.0.0.9</FileVersion>
     <ApplicationIcon>assets\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -34,6 +36,7 @@
     <PackageReference Include="OpenCvSharp4" Version="4.9.0.20240103" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.9.0.20240103" />
     <PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.9.0.20240103" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>

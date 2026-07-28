@@ -1,5 +1,7 @@
 obj/
 bin/
+Properties/
+PublishProfiles/
 .vs/
 .vscode/
 .codegraph/
