@@ -11,11 +11,11 @@
 	<!--<SignAssembly>true</SignAssembly>--> 
 
 	<!-- Version Major.Minor.Patch.Build --> 
-    <Version>1.0.0.9</Version>
+    <Version>1.0.0.10</Version>
 	<!-- Thay đổi khi thay đổi logic, phá vỡ logic cũ -->
 	<AssemblyVersion>1.0.0.0</AssemblyVersion> 
 	<!--version của bản build đang chạy, cấu trúc Major.Minor.Patch.Build-->
-    <FileVersion>1.0.0.9</FileVersion>
+    <FileVersion>1.0.0.10</FileVersion>
     <ApplicationIcon>assets\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -43,6 +43,12 @@
     <Resource Include="assets\icon.ico" />
     <Resource Include="assets\Logo.png" />
     <None Update="Models\active.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Basler.Pylon">
+      <HintPath>C:\Program Files\Basler\pylon\Development\Assemblies\Basler.Pylon\net8.0\x64\Basler.Pylon.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

@@ -8,16 +8,22 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using OpenCvSharp;
 using OpenCvSharp.WpfExtensions;
+using Basler.Pylon;
 
 namespace Client.Services
 {
     public class CameraService : ICameraService
     {
         private VideoCapture? _videoCapture;
+        private Camera? _baslerCamera;
         private Task? _captureTask;
         private CancellationTokenSource? _cts;
         private BitmapSource? _currentFrame;
         private byte[]? _lastFrameBytes;
+        private byte[]? _baslerPixelBuffer;
+        private byte[]? _rawFrameBuffer;
+        private int _rawFrameWidth;
+        private int _rawFrameHeight;
         private readonly object _frameLock = new object();
 
         public bool IsConnected { get; private set; }
@@ -30,7 +36,65 @@ namespace Client.Services
             {
                 try
                 {
-                    // 1. Khởi tạo VideoCapture của OpenCV sử dụng backend DirectShow (Index 0), MDSMF, DSHOW
+                    var baslerCamera = new Camera();
+                    _baslerCamera = baslerCamera;
+                    baslerCamera.Open();
+
+                    try
+                    {
+                        if (baslerCamera.Parameters[PLCamera.OffsetX].IsWritable)
+                            baslerCamera.Parameters[PLCamera.OffsetX].SetValue(0);
+                        if (baslerCamera.Parameters[PLCamera.OffsetY].IsWritable)
+                            baslerCamera.Parameters[PLCamera.OffsetY].SetValue(0);
+                        if (baslerCamera.Parameters[PLCamera.Width].IsWritable)
+                            baslerCamera.Parameters[PLCamera.Width].SetValue(width);
+                        if (baslerCamera.Parameters[PLCamera.Height].IsWritable)
+                            baslerCamera.Parameters[PLCamera.Height].SetValue(height);
+                        if (baslerCamera.Parameters[PLCamera.AcquisitionFrameRateEnable].IsWritable)
+                            baslerCamera.Parameters[PLCamera.AcquisitionFrameRateEnable].SetValue(true);
+                        if (baslerCamera.Parameters[PLCamera.AcquisitionFrameRate].IsWritable)
+                            baslerCamera.Parameters[PLCamera.AcquisitionFrameRate].SetValue((double)fps);
+                    }
+                    catch
+                    {
+                        // Ignore
+                    }
+
+                    try
+                    {
+                        if (baslerCamera.Parameters[PLCameraInstance.MaxNumBuffer].IsWritable)
+                            baslerCamera.Parameters[PLCameraInstance.MaxNumBuffer].SetValue(10);
+                    }
+                    catch
+                    {
+                        // Ignore
+                    }
+
+                    baslerCamera.StreamGrabber?.Start(GrabStrategy.LatestImages, GrabLoop.ProvidedByUser);
+
+                    var cts = new CancellationTokenSource();
+                    _cts = cts;
+                    _captureTask = Task.Factory.StartNew(
+                        () => CaptureLoop(cts.Token),
+                        cts.Token,
+                        TaskCreationOptions.LongRunning,
+                        TaskScheduler.Default);
+
+                    IsConnected = true;
+                    return true;
+                }
+                catch
+                {
+                    if (_baslerCamera != null)
+                    {
+                        try { _baslerCamera.Close(); } catch {}
+                        try { _baslerCamera.Dispose(); } catch {}
+                        _baslerCamera = null;
+                    }
+                }
+
+                try
+                {
                     _videoCapture = new VideoCapture(0, VideoCaptureAPIs.DSHOW);
                     
                     if (!_videoCapture.IsOpened())
@@ -40,19 +104,16 @@ namespace Client.Services
                         return false;
                     }
 
-                    // 2. Thiết lập định dạng nén MJPEG và Resolution & FPS mong muốn
-                    // Cần thiết lập MJPEG (FourCC) trước khi đặt độ phân giải cao (như 4K 3840x2160)
-                    // để tránh nghẽn băng thông USB dẫn đến khởi tạo chậm hoặc lỗi.
                     _videoCapture.Set(VideoCaptureProperties.FourCC, OpenCvSharp.FourCC.FromString("MJPG"));
                     _videoCapture.Set(VideoCaptureProperties.FrameWidth, width);
                     _videoCapture.Set(VideoCaptureProperties.FrameHeight, height);
                     _videoCapture.Set(VideoCaptureProperties.Fps, fps);
 
-                    // 3. Khởi chạy vòng lặp bắt hình nền
-                    _cts = new CancellationTokenSource();
+                    var cts = new CancellationTokenSource();
+                    _cts = cts;
                     _captureTask = Task.Factory.StartNew(
-                        () => CaptureLoop(_cts.Token),
-                        _cts.Token,
+                        () => CaptureLoop(cts.Token),
+                        cts.Token,
                         TaskCreationOptions.LongRunning,
                         TaskScheduler.Default);
 
@@ -74,6 +135,12 @@ namespace Client.Services
 
         private void CaptureLoop(CancellationToken token)
         {
+            if (_baslerCamera != null)
+            {
+                BaslerCaptureLoop(token);
+                return;
+            }
+
             using (var mat = new Mat())
             {
                 while (!token.IsCancellationRequested)
@@ -95,14 +162,17 @@ namespace Client.Services
                                 bitmapSource.Freeze();
                                 _currentFrame = bitmapSource;
 
-                                // Lưu byte ảnh JPEG trực tiếp từ Mat để tối ưu hóa CaptureAsync
-                                byte[] jpegBytes;
-                                if (Cv2.ImEncode(".jpg", mat, out jpegBytes))
+                                // Lưu mảng byte thô để nén JPEG ON-DEMAND trong CaptureAsync
+                                int bufferSize = mat.Width * mat.Height * mat.Channels();
+                                lock (_frameLock)
                                 {
-                                    lock (_frameLock)
+                                    if (_rawFrameBuffer == null || _rawFrameBuffer.Length != bufferSize)
                                     {
-                                        _lastFrameBytes = jpegBytes;
+                                        _rawFrameBuffer = new byte[bufferSize];
                                     }
+                                    System.Runtime.InteropServices.Marshal.Copy(mat.Data, _rawFrameBuffer, 0, bufferSize);
+                                    _rawFrameWidth = mat.Width;
+                                    _rawFrameHeight = mat.Height;
                                 }
 
                                 // Kích hoạt sự kiện cập nhật hình ảnh lên giao diện
@@ -118,6 +188,80 @@ namespace Client.Services
                     // Trễ 5ms để tránh chiếm dụng CPU quá mức
                     Thread.Sleep(5);
                 }
+            }
+        }
+
+        private void BaslerCaptureLoop(CancellationToken token)
+        {
+            var baslerCamera = _baslerCamera;
+            if (baslerCamera == null) return;
+
+            PixelDataConverter converter = new PixelDataConverter();
+            converter.OutputPixelFormat = PixelType.BGR8packed;
+
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    if (!baslerCamera.IsOpen)
+                    {
+                        break;
+                    }
+
+                    using (IGrabResult? grabResult = baslerCamera.StreamGrabber!.RetrieveResult(1000, TimeoutHandling.ThrowException))
+                    {
+                        if (grabResult != null && grabResult.GrabSucceeded)
+                        {
+                            int width = grabResult.Width;
+                            int height = grabResult.Height;
+                            int bufferSize = width * height * 3;
+
+                            // Khởi tạo/cập nhật mảng byte dùng lại (0 allocations)
+                            if (_baslerPixelBuffer == null || _baslerPixelBuffer.Length != bufferSize)
+                            {
+                                _baslerPixelBuffer = new byte[bufferSize];
+                            }
+
+                            converter.Convert(_baslerPixelBuffer, grabResult);
+
+                            // Chuyển đổi sang BitmapSource cho WPF
+                            var bitmapSource = BitmapSource.Create(
+                                width,
+                                height,
+                                96,
+                                96,
+                                PixelFormats.Bgr24,
+                                null,
+                                _baslerPixelBuffer,
+                                width * 3);
+
+                            bitmapSource.Freeze();
+                            _currentFrame = bitmapSource;
+
+                            // Lưu mảng byte thô để nén JPEG ON-DEMAND trong CaptureAsync
+                            lock (_frameLock)
+                            {
+                                if (_rawFrameBuffer == null || _rawFrameBuffer.Length != bufferSize)
+                                {
+                                    _rawFrameBuffer = new byte[bufferSize];
+                                }
+                                Buffer.BlockCopy(_baslerPixelBuffer, 0, _rawFrameBuffer, 0, bufferSize);
+                                _rawFrameWidth = width;
+                                _rawFrameHeight = height;
+                            }
+
+                            // Kích hoạt sự kiện cập nhật hình ảnh lên giao diện
+                            FrameCaptured?.Invoke(this, bitmapSource);
+                        }
+                    }
+                }
+                catch
+                {
+                    // Bỏ qua lỗi bắt hình để luồng tiếp tục chạy
+                }
+
+                // Trễ 5ms để tránh chiếm dụng CPU quá mức
+                Thread.Sleep(5);
             }
         }
 
@@ -145,7 +289,35 @@ namespace Client.Services
                         _cts = null;
                     }
 
-                    // 2. Giải phóng OpenCV VideoCapture
+                    // 2. Giải phóng Basler Camera
+                    var baslerCamera = _baslerCamera;
+                    if (baslerCamera != null)
+                    {
+                        try
+                        {
+                            if (baslerCamera.StreamGrabber != null && baslerCamera.StreamGrabber.IsGrabbing)
+                            {
+                                baslerCamera.StreamGrabber.Stop();
+                            }
+                        }
+                        catch {}
+                        try
+                        {
+                            if (baslerCamera.IsOpen)
+                            {
+                                baslerCamera.Close();
+                            }
+                        }
+                        catch {}
+                        try
+                        {
+                            baslerCamera.Dispose();
+                        }
+                        catch {}
+                        _baslerCamera = null;
+                    }
+
+                    // 3. Giải phóng OpenCV VideoCapture
                     if (_videoCapture != null)
                     {
                         if (!_videoCapture.IsDisposed)
@@ -161,6 +333,10 @@ namespace Client.Services
                     lock (_frameLock)
                     {
                         _lastFrameBytes = null;
+                        _rawFrameBuffer = null;
+                        _baslerPixelBuffer = null;
+                        _rawFrameWidth = 0;
+                        _rawFrameHeight = 0;
                     }
                 }
                 catch
@@ -176,14 +352,37 @@ namespace Client.Services
             {
                 try
                 {
+                    byte[]? rawBytes = null;
+                    int width = 0;
+                    int height = 0;
+
                     lock (_frameLock)
                     {
-                        if (_lastFrameBytes != null)
+                        if (_rawFrameBuffer != null)
                         {
-                            // Trả về bản sao mảng byte đã được lưu trong luồng nền
+                            rawBytes = new byte[_rawFrameBuffer.Length];
+                            Buffer.BlockCopy(_rawFrameBuffer, 0, rawBytes, 0, _rawFrameBuffer.Length);
+                            width = _rawFrameWidth;
+                            height = _rawFrameHeight;
+                        }
+                        else if (_lastFrameBytes != null)
+                        {
+                            // Trả về bản sao mảng byte đã được lưu trong luồng nền (dự phòng)
                             var result = new byte[_lastFrameBytes.Length];
                             Buffer.BlockCopy(_lastFrameBytes, 0, result, 0, _lastFrameBytes.Length);
                             return result;
+                        }
+                    }
+
+                    if (rawBytes != null && width > 0 && height > 0)
+                    {
+                        using (Mat mat = new Mat(height, width, MatType.CV_8UC3, rawBytes))
+                        {
+                            byte[] jpegBytes;
+                            if (Cv2.ImEncode(".jpg", mat, out jpegBytes))
+                            {
+                                return jpegBytes;
+                            }
                         }
                     }
 

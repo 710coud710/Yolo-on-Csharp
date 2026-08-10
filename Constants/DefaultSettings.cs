@@ -40,10 +40,10 @@ namespace Client.Constants
         public const double GeneralRoiWidth = 100;
         public const double GeneralRoiHeight = 100;
         public const string DatabaseConnectionString =
-        "Data Source=192.168.7.103;" +
+        "Data Source=192.168.4.10;" +
         "Persist Security Info=True;" +
-        "User ID=qa_web;" +
-        "Password=Adv@1234!;" +
+        "User ID=app-web;" +
+        "Password=Adv@12345;" +
         "Initial Catalog=VisionCounter;" +
         "Pooling=False;" +
         "MultipleActiveResultSets=False;" +
