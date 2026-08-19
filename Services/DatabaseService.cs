@@ -23,7 +23,11 @@ namespace Client.Services
 
         private string GetConnectionString()
         {
-            // Retrieve connection string from DefaultSettings to ensure correct credentials
+            var settings = _settingsService?.LoadSettings();
+            if (settings != null && !string.IsNullOrWhiteSpace(settings.DatabaseConnectionString))
+            {
+                return settings.DatabaseConnectionString;
+            }
             return Client.Constants.DefaultSettings.DatabaseConnectionString;
         }
 

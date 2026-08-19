@@ -147,7 +147,12 @@ namespace Client.ViewModels
                 try
                 {
                     var dbService = new DatabaseService(_settingsService);
-                    dbService.InitializeDatabase(Client.Constants.DefaultSettings.DatabaseConnectionString);
+                    var settings = _settingsService.LoadSettings();
+                    var connectionString = settings != null && !string.IsNullOrWhiteSpace(settings.DatabaseConnectionString)
+                        ? settings.DatabaseConnectionString
+                        : Client.Constants.DefaultSettings.DatabaseConnectionString;
+
+                    dbService.InitializeDatabase(connectionString);
                     _logService.LogInfo("Database schema initialized and verified successfully.");
 
                     await dbService.InitializeMachineIdAsync();
