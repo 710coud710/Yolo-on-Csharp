@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Windows.Media.Imaging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 using OpenCvSharp.Dnn;
+using OpenCvSharp.WpfExtensions;
 using Client.Models;
 
 namespace Client.Services
@@ -47,8 +49,16 @@ namespace Client.Services
 
                     // Tải model ONNX
                     var options = new SessionOptions();
-                    // Có thể cấu hình GPU/DirectML ở đây nếu cần thiết
-                    // options.AppendExecutionProvider_CPU();
+                    try
+                    {
+                        // Thử kích hoạt GPU qua DirectML (tự động fallback về CPU nếu không tương thích)
+                        options.AppendExecutionProvider_DML(0);
+                        Console.WriteLine("ONNX Runtime: Successfully initialized DirectML (GPU).");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"ONNX Runtime: DirectML (GPU) not available. Falling back to CPU. Error: {ex.Message}");
+                    }
 
                     _session = new InferenceSession(modelPath, options);
                     _currentModelPath = modelPath;
@@ -112,7 +122,6 @@ namespace Client.Services
             bool enableTiling = false,
             double tilingOverlap = 0.2)
         {
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var response = new LocalDetectionResponse();
 
             if (imageBytes == null || imageBytes.Length == 0)
@@ -133,6 +142,117 @@ namespace Client.Services
                     return response;
                 }
 
+                return DetectInternal(
+                    src, 
+                    confidenceThreshold, 
+                    nmsThreshold, 
+                    targetClassCode, 
+                    roiX, 
+                    roiY, 
+                    roiWidth, 
+                    roiHeight, 
+                    useLetterbox, 
+                    enableTiling, 
+                    tilingOverlap, 
+                    generateBitmapSource: false);
+            }
+            catch (Exception ex)
+            {
+                response.Result.IsSuccess = false;
+                response.Result.ErrorMessage = ex.Message;
+                return response;
+            }
+        }
+
+        public LocalDetectionResponse Detect(
+            BitmapSource bitmapSource, 
+            float confidenceThreshold = 0.25f, 
+            float nmsThreshold = 0.45f, 
+            int? targetClassCode = null, 
+            double roiX = 0, 
+            double roiY = 0, 
+            double roiWidth = 100, 
+            double roiHeight = 100,
+            bool useLetterbox = true,
+            bool enableTiling = false,
+            double tilingOverlap = 0.2)
+        {
+            var response = new LocalDetectionResponse();
+
+            if (bitmapSource == null)
+            {
+                response.Result.IsSuccess = false;
+                response.Result.ErrorMessage = "Empty bitmap source data";
+                return response;
+            }
+
+            try
+            {
+                // Chuyển đổi trực tiếp BitmapSource sang OpenCV Mat
+                using var src = BitmapSourceConverter.ToMat(bitmapSource);
+                if (src.Empty())
+                {
+                    response.Result.IsSuccess = false;
+                    response.Result.ErrorMessage = "Failed to convert BitmapSource to Mat";
+                    return response;
+                }
+
+                // Bảo đảm hệ màu BGR 3 kênh để đưa vào mô hình YOLO
+                using var bgrMat = new Mat();
+                if (src.Channels() == 4)
+                {
+                    Cv2.CvtColor(src, bgrMat, ColorConversionCodes.BGRA2BGR);
+                }
+                else if (src.Channels() == 1)
+                {
+                    Cv2.CvtColor(src, bgrMat, ColorConversionCodes.GRAY2BGR);
+                }
+                else
+                {
+                    src.CopyTo(bgrMat);
+                }
+
+                return DetectInternal(
+                    bgrMat, 
+                    confidenceThreshold, 
+                    nmsThreshold, 
+                    targetClassCode, 
+                    roiX, 
+                    roiY, 
+                    roiWidth, 
+                    roiHeight, 
+                    useLetterbox, 
+                    enableTiling, 
+                    tilingOverlap, 
+                    generateBitmapSource: true);
+            }
+            catch (Exception ex)
+            {
+                response.Result.IsSuccess = false;
+                response.Result.ErrorMessage = ex.Message;
+                return response;
+            }
+        }
+
+        private LocalDetectionResponse DetectInternal(
+            Mat src, 
+            float confidenceThreshold, 
+            float nmsThreshold, 
+            int? targetClassCode, 
+            double roiX, 
+            double roiY, 
+            double roiWidth, 
+            double roiHeight,
+            bool useLetterbox,
+            bool enableTiling,
+            double tilingOverlap,
+            bool generateBitmapSource)
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var response = new LocalDetectionResponse();
+
+            try
+            {
                 // Tính toán pixel coordinates cho ROI
                 int rx = (int)(src.Width * roiX / 100.0);
                 int ry = (int)(src.Height * roiY / 100.0);
@@ -198,8 +318,12 @@ namespace Client.Services
                 // 1. Vẽ Bounding Boxes của objects lên ảnh
                 DrawDetections(src, detectedObjects);
 
-                // 2. Encode sang byte[] JPEG cho lưu trữ (không có khung ROI)
-                Cv2.ImEncode(".jpg", src, out byte[] outputBytes);
+                // 2. Encode sang byte[] JPEG cho lưu trữ (không có khung ROI) - Chỉ làm khi không chạy chế độ tối ưu cho stream
+                if (!generateBitmapSource)
+                {
+                    Cv2.ImEncode(".jpg", src, out byte[] outputBytes);
+                    response.AnnotatedImageBytes = outputBytes;
+                }
 
                 // 3. Vẽ khung ROI (nếu được kích hoạt) lên cùng ảnh để hiển thị lên UI
                 if (isRoiEnabled)
@@ -209,8 +333,19 @@ namespace Client.Services
                     Cv2.PutText(src, "ROI", new Point(rx + 5, ry + 20), HersheyFonts.HersheySimplex, 0.6, new Scalar(0, 165, 255), 2);
                 }
 
-                // 4. Encode sang byte[] JPEG cho giao diện
-                Cv2.ImEncode(".jpg", src, out byte[] uiOutputBytes);
+                if (generateBitmapSource)
+                {
+                    // Chuyển đổi trực tiếp Mat -> BitmapSource (không nén JPEG)
+                    var uiBitmap = BitmapSourceConverter.ToBitmapSource(src);
+                    uiBitmap.Freeze();
+                    response.UiAnnotatedBitmapSource = uiBitmap;
+                }
+                else
+                {
+                    // 4. Encode sang byte[] JPEG cho giao diện thông thường
+                    Cv2.ImEncode(".jpg", src, out byte[] uiOutputBytes);
+                    response.UiAnnotatedImageBytes = uiOutputBytes;
+                }
 
                 stopwatch.Stop();
 
@@ -220,8 +355,6 @@ namespace Client.Services
                 response.Result.Timestamp = DateTime.Now;
                 response.Result.ProcessingTimeMs = stopwatch.Elapsed.TotalMilliseconds;
                 response.Result.ModelPath = _currentModelPath;
-                response.AnnotatedImageBytes = outputBytes;
-                response.UiAnnotatedImageBytes = uiOutputBytes;
             }
             catch (Exception ex)
             {

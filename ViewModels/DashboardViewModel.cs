@@ -585,49 +585,38 @@ namespace Client.ViewModels
                     {
                         try
                         {
-                            byte[]? imageData = null;
-                            App.Current.Dispatcher.Invoke(() =>
-                            {
-                                imageData = BitmapSourceToByteArray(frame);
-                            });
+                            var settings = _settingsService.LoadSettings();
+                            float confThreshold = (float)settings.AiModels.ConfidenceThreshold;
+                            float nmsThreshold = (float)settings.AiModels.NmsThreshold;
+                            bool allClass = settings.General?.AllClass == true;
+                            int? targetClassCode = allClass ? null : (int?)SelectedItem?.ClassCode;
+                            double rx = settings.General?.RoiX ?? 0;
+                            double ry = settings.General?.RoiY ?? 0;
+                            double rw = settings.General?.RoiWidth ?? 100;
+                            double rh = settings.General?.RoiHeight ?? 100;
 
-                            if (imageData != null)
-                            {
-                                var settings = _settingsService.LoadSettings();
-                                float confThreshold = (float)settings.AiModels.ConfidenceThreshold;
-                                float nmsThreshold = (float)settings.AiModels.NmsThreshold;
-                                bool allClass = settings.General?.AllClass == true;
-                                int? targetClassCode = allClass ? null : (int?)SelectedItem?.ClassCode;
-                                double rx = settings.General?.RoiX ?? 0;
-                                double ry = settings.General?.RoiY ?? 0;
-                                double rw = settings.General?.RoiWidth ?? 100;
-                                double rh = settings.General?.RoiHeight ?? 100;
+                            // Chạy nhận diện trực tiếp dùng BitmapSource (đã được Freeze từ CameraService)
+                            var localResult = _detector.Detect(
+                                frame, 
+                                confThreshold, 
+                                nmsThreshold, 
+                                targetClassCode, 
+                                rx, 
+                                ry, 
+                                rw, 
+                                rh,
+                                settings.AiModels?.UseLetterbox ?? true,
+                                settings.AiModels?.EnableTiling ?? false,
+                                settings.AiModels?.TilingOverlap ?? 0.2
+                            );
 
-                                var localResult = _detector.Detect(
-                                    imageData, 
-                                    confThreshold, 
-                                    nmsThreshold, 
-                                    targetClassCode, 
-                                    rx, 
-                                    ry, 
-                                    rw, 
-                                    rh,
-                                    settings.AiModels?.UseLetterbox ?? true,
-                                    settings.AiModels?.EnableTiling ?? false,
-                                    settings.AiModels?.TilingOverlap ?? 0.2
-                                );
-                                if (localResult.Result.IsSuccess && localResult.UiAnnotatedImageBytes != null)
+                            if (localResult.Result.IsSuccess && localResult.UiAnnotatedBitmapSource != null)
+                            {
+                                App.Current.Dispatcher.Invoke(() =>
                                 {
-                                    App.Current.Dispatcher.Invoke(() =>
-                                    {
-                                        var displayImage = ByteArrayToBitmapSource(localResult.UiAnnotatedImageBytes);
-                                        if (displayImage != null)
-                                        {
-                                            DisplayFrame = displayImage;
-                                        }
-                                        LiveStreamCount = localResult.Result.Count;
-                                    });
-                                }
+                                    DisplayFrame = localResult.UiAnnotatedBitmapSource;
+                                    LiveStreamCount = localResult.Result.Count;
+                                });
                             }
                         }
                         catch (Exception ex)
