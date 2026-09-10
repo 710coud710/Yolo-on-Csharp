@@ -269,6 +269,23 @@ namespace Client.ViewModels
 
         public ObservableCollection<string> Logs => _logService.Entries;
 
+        private readonly IBatchCounterService _batchCounterService;
+        private bool _isBatchDetailsOpen;
+
+        public int BatchTotalCount => _batchCounterService.TotalCount;
+        public ObservableCollection<BatchIncrementItem> BatchIncrements => _batchCounterService.Increments;
+        public bool HasBatchIncrements => _batchCounterService.Increments.Count > 0;
+        public string LastBatchIncrementText => _batchCounterService.Increments.LastOrDefault()?.DisplayText ?? "";
+
+        public bool IsBatchDetailsOpen
+        {
+            get => _isBatchDetailsOpen;
+            set => SetProperty(ref _isBatchDetailsOpen, value);
+        }
+
+        public ICommand ResetBatchCounterCommand { get; }
+        public ICommand ToggleBatchDetailsCommand { get; }
+
         public ICommand ConnectCameraCommand { get; }
         public ICommand DisconnectCameraCommand { get; }
         public ICommand StartCommand { get; }
@@ -276,9 +293,21 @@ namespace Client.ViewModels
         public ICommand ToggleSettingsCommand { get; }
         public ICommand CancelSettingsCommand { get; }
 
-        public DashboardViewModel(IYoloDetector detector, ModelManagerService modelManager, ISettingsService settingsService, ICameraService cameraService)
+        public DashboardViewModel(IYoloDetector detector, ModelManagerService modelManager, ISettingsService settingsService, ICameraService cameraService, IBatchCounterService? batchCounterService = null)
         {
             _logService = InMemoryLogService.Instance;
+            _batchCounterService = batchCounterService ?? new BatchCounterService();
+            _batchCounterService.TotalChanged += (s, e) =>
+            {
+                App.Current?.Dispatcher?.Invoke(() =>
+                {
+                    OnPropertyChanged(nameof(BatchTotalCount));
+                    OnPropertyChanged(nameof(BatchIncrements));
+                    OnPropertyChanged(nameof(HasBatchIncrements));
+                    OnPropertyChanged(nameof(LastBatchIncrementText));
+                });
+            };
+
             _cameraService = cameraService;
             _cameraService.FrameCaptured += OnFrameCaptured;
             _detector = detector;
@@ -305,9 +334,35 @@ namespace Client.ViewModels
             // ==================================
             ToggleSettingsCommand = new RelayCommand(_ => ToggleSettings());
             CancelSettingsCommand = new RelayCommand(_ => CancelSettings());
+            ResetBatchCounterCommand = new RelayCommand(_ => HandleResetBatchCounter());
+            ToggleBatchDetailsCommand = new RelayCommand(_ => IsBatchDetailsOpen = !IsBatchDetailsOpen);
 
             LoadSettings();
             _logService.LogInfo("Dashboard started");
+        }
+
+        private void HandleResetBatchCounter()
+        {
+            bool confirm = false;
+            App.Current?.Dispatcher?.Invoke(() =>
+            {
+                var dialog = new Client.Views.ItemSelectConfirmDialog(
+                    "Bạn có chắc chắn muốn đặt lại tổng số lượng về 0 không?",
+                    "Đặt lại bộ đếm tổng",
+                    "Alert",
+                    "#FF9500");
+                if (App.Current.MainWindow != null)
+                {
+                    dialog.Owner = App.Current.MainWindow;
+                }
+                confirm = dialog.ShowDialog() == true;
+            });
+
+            if (confirm)
+            {
+                _batchCounterService.Reset();
+                _logService.LogInfo("Batch total counter was reset to 0.");
+            }
         }
 
         public void LoadSettings()

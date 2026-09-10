@@ -109,8 +109,11 @@ namespace Client.ViewModels
 
 
 
-        public ResultViewModel()
+        private IBatchCounterService? _batchCounterService;
+
+        public ResultViewModel(IBatchCounterService? batchCounterService = null)
         {
+            _batchCounterService = batchCounterService;
             _logService = InMemoryLogService.Instance;
             _machineName = string.Empty;
             _outputImageUrl = string.Empty;
@@ -119,6 +122,11 @@ namespace Client.ViewModels
             BackCommand = new RelayCommand(_ => HandleBack());
             PassCommand = new RelayCommand(async _ => await UpdateStatusAsync("Pass"));
             FailCommand = new RelayCommand(async _ => await UpdateStatusAsync("Fail"));
+        }
+
+        public void SetBatchCounterService(IBatchCounterService batchCounterService)
+        {
+            _batchCounterService = batchCounterService;
         }
 
         public void LoadFromLocalResult(DetectionResult result, byte[]? annotatedImageBytes, long detectionId, string itemCode,
@@ -349,6 +357,13 @@ namespace Client.ViewModels
                 if (success)
                 {
                     StatusMessage = $"Status updated to {newStatus} successfully.";
+
+                    if (newStatus.Equals("Pass", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _batchCounterService?.AddPassResult(_detectionId, TotalDetections, ItemCode);
+                        _logService.LogInfo($"[Batch Counter] Added +{TotalDetections} ({ItemCode}) to Total.");
+                    }
+
                     _navigateBack?.Invoke();
                 }
                 else

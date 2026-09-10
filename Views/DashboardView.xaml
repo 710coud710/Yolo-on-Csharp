@@ -110,6 +110,25 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
+
+                    <!-- Cumulative Batch Total HUD Badge on Camera -->
+                    <Border HorizontalAlignment="Left" VerticalAlignment="Top"
+                            Margin="16"
+                            Background="#E6FFFFFF"
+                            BorderBrush="#E5E5EA"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="12,6"
+                            Visibility="{Binding HasBatchIncrements, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="1" Color="Black" Opacity="0.08"/>
+                        </Border.Effect>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="CheckCircleOutline" Foreground="#34C759" Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Total Pass: " Foreground="#8E8E93" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding BatchTotalCount, StringFormat='{}{0:N0} pcs'}" Foreground="#1C1C1E" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
 
@@ -418,19 +437,6 @@
                             </StackPanel>
                         </Border>
                         <!-- ================================== -->
-
-                        <!-- Selected Material Display (Read-Only) -->
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,16">
-                            <TextBlock Text="Target Item: " 
-                                       FontWeight="Medium" 
-                                       Foreground="#8E8E93"
-                                       FontSize="13"/>
-                            <TextBlock Text="{Binding SelectedItem.ItemCode, TargetNullValue='None (Select on Items tab)'}" 
-                                       FontWeight="SemiBold" 
-                                       Foreground="#007AFF"
-                                       FontSize="13"/>
-                        </StackPanel>
-
                         <!-- Capture Mode Start Button -->
                         <Button
                                 Command="{Binding StartCommand}"
@@ -482,6 +488,18 @@
                             </StackPanel>
                         </Button>
 
+                        <!-- Selected Material Display (Read-Only) -->
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,16">
+                            <TextBlock Text="Target Item: " 
+                                       FontWeight="Medium" 
+                                       Foreground="#8E8E93"
+                                       FontSize="13"/>
+                            <TextBlock Text="{Binding SelectedItem.ItemCode, TargetNullValue='None (Select on Items tab)'}" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="#007AFF"
+                                       FontSize="13"/>
+                        </StackPanel>
+                        
                         <!-- Stream Mode Toggle Button -->
                         <Button
                                 Command="{Binding ToggleStreamDetectionCommand}"
@@ -560,37 +578,275 @@
                             </StackPanel>
                         </Button>
 
-                        <!-- Last Result Card (Capture Mode Only) -->
-                        <Border Margin="0,16,0,0" 
-                                Background="#F2F2F7" 
-                                BorderBrush="#E5E5EA" 
+                        <!-- Cumulative Batch Total Card -->
+                        <Border Margin="0,12,0,0" 
+                                Background="#F2F8F4" 
+                                BorderBrush="#D1E7DD" 
                                 BorderThickness="1" 
                                 CornerRadius="12" 
-                                Padding="12">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ModelProcess}" Value="Stream">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
+                                Padding="12,4">
                             <StackPanel>
-                                <TextBlock Text="Last Result" 
-                                           FontWeight="SemiBold" 
-                                           Foreground="#1C1C1E"
-                                           Margin="0,0,0,8"
-                                           FontSize="13"/>
-                                <TextBlock Foreground="#3A3A3C" FontSize="13">
-                                    <Run Text="Count: " FontWeight="Medium"/>
-                                    <Run Text="{Binding LastResult.Count, Mode=OneWay, FallbackValue=--}" FontWeight="SemiBold" Foreground="#007AFF"/>
-                                </TextBlock>
-                                <TextBlock Foreground="#3A3A3C" Margin="0,4,0,0" FontSize="13">
-                                    <Run Text="Time: " FontWeight="Medium"/>
-                                    <Run Text="{Binding LastResult.Timestamp, Mode=OneWay, StringFormat='HH:mm:ss', FallbackValue=--}"/>
-                                </TextBlock>
+                                <!-- Card Header: Tiêu đề + Nút Chi tiết (Mở rộng / Thu gọn) + Nút Reset -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <materialDesign:PackIcon Kind="CheckCircleOutline" 
+                                                                 Width="18" 
+                                                                 Height="18" 
+                                                                 Foreground="#34C759" 
+                                                                 VerticalAlignment="Center" 
+                                                                 Margin="0,0,6,0"/>
+                                        <TextBlock Text="Total Count (PASS)" 
+                                                   FontWeight="Bold" 
+                                                   Foreground="#198754" 
+                                                   FontSize="12" 
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <!-- Nút Mở rộng / Ẩn chi tiết -->
+                                    <Button Grid.Column="1"
+                                            Command="{Binding ToggleBatchDetailsCommand}"
+                                            ToolTip="Bấm để xem hoặc ẩn danh sách chi tiết từng lần cộng"
+                                            Height="26"
+                                            Background="#E8F8EE"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            Padding="8,0"
+                                            Margin="0,0,6,0">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}" CornerRadius="13" Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#D1E7DD"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#198754" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="details"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsBatchDetailsOpen}" Value="True">
+                                                                <Setter Property="Text" Value="close"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <materialDesign:PackIcon Width="14" Height="14" Foreground="#198754" VerticalAlignment="Center" Margin="3,0,0,0">
+                                                <materialDesign:PackIcon.Style>
+                                                    <Style TargetType="materialDesign:PackIcon">
+                                                        <Setter Property="Kind" Value="ChevronDown"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsBatchDetailsOpen}" Value="True">
+                                                                <Setter Property="Kind" Value="ChevronUp"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </materialDesign:PackIcon.Style>
+                                            </materialDesign:PackIcon>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Nút Reset về 0 -->
+                                    <Button Grid.Column="2"
+                                            Command="{Binding ResetBatchCounterCommand}"
+                                            ToolTip="Đặt lại tổng về 0 (Reset)"
+                                            Width="26" Height="26"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            Padding="0">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}" CornerRadius="13">
+                                                                <materialDesign:PackIcon Kind="Refresh" Width="15" Height="15" Foreground="#8E8E93" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#FF0000"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </Grid>
+
+                                <!-- Tổng đếm (Hiển thị mặc định ở chế độ bình thường, bấm vào để mở rộng/thu gọn chi tiết) -->
+                                <Grid Margin="0,0,0,0" Cursor="Hand" ToolTip="Bấm để xem/ẩn chi tiết từng lần cộng">
+                                    <Grid.InputBindings>
+                                        <MouseBinding MouseAction="LeftClick" Command="{Binding ToggleBatchDetailsCommand}"/>
+                                    </Grid.InputBindings>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Số lượng tổng to rõ -->
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                        <TextBlock Text="{Binding BatchTotalCount, FallbackValue=0, StringFormat='{}{0:N0}'}" 
+                                                   FontWeight="Bold" 
+                                                   FontSize="38" 
+                                                   Foreground="#198754"
+                                                   VerticalAlignment="Bottom"/>
+                                        <TextBlock Text=" pcs" 
+                                                   FontSize="14" 
+                                                   FontWeight="SemiBold" 
+                                                   Foreground="#8E8E93" 
+                                                   Margin="4,0,0,4" 
+                                                   VerticalAlignment="Bottom"/>
+                                    </StackPanel>
+
+                                    <!-- Huy hiệu lần cộng gần nhất (nếu có) -->
+                                    <Border Grid.Column="1"
+                                            Background="#D4EDDA"
+                                            CornerRadius="10"
+                                            Padding="6,3"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding HasBatchIncrements, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="{Binding LastBatchIncrementText}" 
+                                                   FontSize="11" 
+                                                   FontWeight="Bold" 
+                                                   Foreground="#155724"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- DANH SÁCH CHI TIẾT TỪNG LẦN (Mở rộng ngay bên dưới khi bấm vào, bình thường ẩn đi) -->
+                                <StackPanel Visibility="{Binding IsBatchDetailsOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            Margin="0,6,0,0">
+                                    
+                                    <Separator Background="#D1E7DD" Margin="0,0,0,8" Height="1"/>
+
+                                    <!-- <TextBlock Text="Chi tiết các lần cộng dồn:" 
+                                               FontSize="11" 
+                                               FontWeight="SemiBold" 
+                                               Foreground="#8E8E93" 
+                                               Margin="0,0,0,6"/> -->
+
+                                    <!-- Dải chip các lần cộng (+100 +110 +98) -->
+                                    <!-- <ScrollViewer HorizontalScrollBarVisibility="Auto" 
+                                                  VerticalScrollBarVisibility="Disabled"
+                                                  Margin="0,0,0,6"
+                                                  Visibility="{Binding HasBatchIncrements, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <ItemsControl ItemsSource="{Binding BatchIncrements}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="#FFFFFF"
+                                                            BorderBrush="#34C759"
+                                                            BorderThickness="1"
+                                                            CornerRadius="10"
+                                                            Padding="8,3"
+                                                            Margin="0,0,6,2"
+                                                            ToolTip="{Binding TooltipText}"
+                                                            Cursor="Help">
+                                                        <TextBlock Text="{Binding DisplayText, Mode=OneWay}" 
+                                                                   FontWeight="Bold" 
+                                                                   FontSize="12" 
+                                                                   Foreground="#198754"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer> -->
+
+                                    <!-- Danh sách cuộn chi tiết từng dòng -->
+                                    <Border Background="#FFFFFF"
+                                            BorderBrush="#E5E5EA"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="6"
+                                            MaxHeight="150">
+                                        <Grid>
+                                            <!-- Khi có dữ liệu -->
+                                            <ScrollViewer VerticalScrollBarVisibility="Auto" 
+                                                          HorizontalScrollBarVisibility="Disabled"
+                                                          Visibility="{Binding HasBatchIncrements, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                <ItemsControl ItemsSource="{Binding BatchIncrements}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border BorderBrush="#F2F2F7" BorderThickness="0,0,0,1" Padding="4,4">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBlock Grid.Column="0" 
+                                                                               Text="{Binding Index, Mode=OneWay, StringFormat='#{0}'}" 
+                                                                               FontWeight="SemiBold" 
+                                                                               FontSize="11" 
+                                                                               Foreground="#8E8E93" 
+                                                                               Margin="0,0,8,0"/>
+                                                                    <TextBlock Grid.Column="1" 
+                                                                               FontSize="11" 
+                                                                               Foreground="#1C1C1E">
+                                                                        <Run Text="{Binding DisplayText, Mode=OneWay}" FontWeight="Bold" Foreground="#198754"/>
+                                                                        <Run Text=" (" Foreground="#8E8E93"/>
+                                                                        <Run Text="{Binding ItemCode, Mode=OneWay}" Foreground="#007AFF"/>
+                                                                        <Run Text=") - " Foreground="#8E8E93"/>
+                                                                        <Run Text="{Binding FormattedTime, Mode=OneWay}" Foreground="#8E8E93"/>
+                                                                    </TextBlock>
+                                                                    <TextBlock Grid.Column="2" 
+                                                                               Text="{Binding RunningTotal, Mode=OneWay, StringFormat='Σ {0}'}" 
+                                                                               FontWeight="SemiBold" 
+                                                                               FontSize="11" 
+                                                                               Foreground="#34C759"/>
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+
+                                            <!-- Khi chưa có lượt đếm nào -->
+                                            <TextBlock Text="Chưa có lượt đếm Pass nào trong lô này" 
+                                                       Foreground="#8E8E93" 
+                                                       FontSize="11" 
+                                                       FontStyle="Italic"
+                                                       HorizontalAlignment="Center" 
+                                                       VerticalAlignment="Center" 
+                                                       Margin="8">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasBatchIncrements}" Value="False">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 

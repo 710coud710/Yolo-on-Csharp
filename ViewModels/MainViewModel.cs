@@ -134,9 +134,10 @@ namespace Client.ViewModels
             _detector.LoadModel(initialModel);
 
             var cameraService = new CameraService();
-            DashboardViewModel = new DashboardViewModel(_detector, _modelManager, _settingsService, cameraService);
+            var batchCounterService = new BatchCounterService();
+            DashboardViewModel = new DashboardViewModel(_detector, _modelManager, _settingsService, cameraService, batchCounterService);
             ItemsViewModel = new ItemsViewModel(this, _settingsService);
-            ResultViewModel = new ResultViewModel();
+            ResultViewModel = new ResultViewModel(batchCounterService);
             ModelViewModel = new ModelViewModel(_detector, _modelManager, _settingsService, cameraService);
             HistoryViewModel = new HistoryViewModel();
             SettingsViewModel = new SettingsViewModel(_settingsService, _modelManager, cameraService);
