@@ -5,7 +5,6 @@ using System.Windows.Media.Imaging;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
-using System.Windows.Media.Imaging;
 using Client.Commands;
 using Client.Models;
 using Client.Services;
@@ -339,6 +338,13 @@ namespace Client.ViewModels
 
             LoadSettings();
             _logService.LogInfo("Dashboard started");
+
+            // Tự động kết nối camera ngầm khi khởi động ứng dụng
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(150);
+                await ConnectCamera();
+            });
         }
 
         private void HandleResetBatchCounter()
@@ -397,29 +403,37 @@ namespace Client.ViewModels
             }
         }
 
-        private async Task ConnectCamera()
+        public async Task ConnectCamera()
         {
-            StatusMessage = "Connecting to camera...";
+            App.Current?.Dispatcher?.Invoke(() =>
+            {
+                StatusMessage = "Connecting to camera...";
+            });
             _logService.LogInfo("Connecting to camera...");
             
             var settings = _settingsService.LoadSettings();
             bool success = await _cameraService.ConnectAsync(settings.Camera.CaptureWidth, settings.Camera.CaptureHeight, settings.Camera.Fps);
             
-            if (success)
+            App.Current?.Dispatcher?.Invoke(() =>
             {
-                IsCameraConnected = true;
-                CameraInfo.IsConnected = true;
-                CameraInfo.Status = "Connected";
-                CameraInfo.DeviceName = "Camera / Simulator";
-                StatusMessage = "Camera connected successfully";
-                _logService.LogInfo("Camera connected successfully");
-            }
-            else
-            {
-                IsCameraConnected = false;
-                StatusMessage = "Failed to connect camera";
-                _logService.LogError("Failed to connect camera");
-            }
+                if (success)
+                {
+                    IsCameraConnected = true;
+                    CameraInfo.IsConnected = true;
+                    CameraInfo.Status = "Connected";
+                    CameraInfo.DeviceName = "Camera / Simulator";
+                    StatusMessage = "Camera connected successfully";
+                    _logService.LogInfo("Camera connected successfully");
+                }
+                else
+                {
+                    IsCameraConnected = false;
+                    CameraInfo.IsConnected = false;
+                    CameraInfo.Status = "Disconnected";
+                    StatusMessage = "Failed to connect camera";
+                    _logService.LogWarning("Failed to connect camera");
+                }
+            });
         }
 
         private async Task DisconnectCamera()
@@ -802,6 +816,15 @@ namespace Client.ViewModels
                     StatusMessage = "Camera settings saved successfully!";
                     _logService.LogInfo("Camera settings saved successfully!");
                     IsSettingsMode = false;
+
+                    if (IsCameraConnected)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            await DisconnectCamera();
+                            await ConnectCamera();
+                        });
+                    }
                 }
                 catch (Exception ex)
                 {
