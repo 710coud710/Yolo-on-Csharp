@@ -5,6 +5,13 @@ using Client.Models;
 
 namespace Client.Services
 {
+    public enum YoloModelType
+    {
+        Auto,
+        Detect,
+        Obb
+    }
+
     public class LocalDetectionResponse
     {
         public DetectionResult Result { get; set; } = new();
@@ -16,6 +23,7 @@ namespace Client.Services
     public interface IYoloDetector : IDisposable
     {
         void LoadModel(string modelPath);
+        YoloModelType CurrentModelType { get; }
         LocalDetectionResponse Detect(
             byte[] imageBytes, 
             float confidenceThreshold = 0.25f, 

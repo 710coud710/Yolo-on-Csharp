@@ -457,36 +457,36 @@ namespace Client.Services
                         detectionId = Convert.ToInt64(await cmd.ExecuteScalarAsync());
                     }
 
-                    // 4. Insert detection details
-                    double avgConfidence = 0.0;
-                    if (result.Count > 0 && result.DetectedObjects.Any())
-                    {
-                        avgConfidence = result.DetectedObjects.Average(o => o.Confidence);
-                    }
+                    // // 4. Insert detection details
+                    // double avgConfidence = 0.0;
+                    // if (result.Count > 0 && result.DetectedObjects.Any())
+                    // {
+                    //     avgConfidence = result.DetectedObjects.Average(o => o.Confidence);
+                    // }
 
-                    var detailObj = new
-                    {
-                        class_id = selectedItem.ClassCode,
-                        count = result.Count,
-                        avg_confidence = avgConfidence
-                    };
-                    string resultJson = System.Text.Json.JsonSerializer.Serialize(detailObj);
+                    // var detailObj = new
+                    // {
+                    //     class_id = selectedItem.ClassCode,
+                    //     count = result.Count,
+                    //     avg_confidence = avgConfidence
+                    // };
+                    // string resultJson = System.Text.Json.JsonSerializer.Serialize(detailObj);
 
-                    string insertDetailQuery = @"
-                        INSERT INTO detection_details (detection_id, item_id, quantity, avg_confidence, result_json, created_at)
-                        VALUES (@DetectionId, @ItemId, @Quantity, @AvgConfidence, @ResultJson, @CreatedAt)";
+                    // string insertDetailQuery = @"
+                    //     INSERT INTO detection_details (detection_id, item_id, quantity, avg_confidence, result_json, created_at)
+                    //     VALUES (@DetectionId, @ItemId, @Quantity, @AvgConfidence, @ResultJson, @CreatedAt)";
 
-                    using (var cmd = new SqlCommand(insertDetailQuery, connection))
-                    {
-                        cmd.Parameters.AddWithValue("@DetectionId", detectionId);
-                        cmd.Parameters.AddWithValue("@ItemId", selectedItem.Id);
-                        cmd.Parameters.AddWithValue("@Quantity", result.Count);
-                        cmd.Parameters.AddWithValue("@AvgConfidence", avgConfidence);
-                        cmd.Parameters.AddWithValue("@ResultJson", resultJson);
-                        cmd.Parameters.AddWithValue("@CreatedAt", result.Timestamp);
+                    // using (var cmd = new SqlCommand(insertDetailQuery, connection))
+                    // {
+                    //     cmd.Parameters.AddWithValue("@DetectionId", detectionId);
+                    //     cmd.Parameters.AddWithValue("@ItemId", selectedItem.Id);
+                    //     cmd.Parameters.AddWithValue("@Quantity", result.Count);
+                    //     cmd.Parameters.AddWithValue("@AvgConfidence", avgConfidence);
+                    //     cmd.Parameters.AddWithValue("@ResultJson", resultJson);
+                    //     cmd.Parameters.AddWithValue("@CreatedAt", result.Timestamp);
 
-                        await cmd.ExecuteNonQueryAsync();
-                    }
+                    //     await cmd.ExecuteNonQueryAsync();
+                    // }
 
                     InMemoryLogService.Instance.LogInfo($"Saved detection to database successfully. ID: {detectionId}");
                     return detectionId;

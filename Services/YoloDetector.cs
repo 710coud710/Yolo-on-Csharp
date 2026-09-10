@@ -18,10 +18,12 @@ namespace Client.Services
         private List<string> _classNames = new();
         private string _currentModelPath = string.Empty;
         private bool _isModelLoaded = false;
+        private YoloModelType _currentModelType = YoloModelType.Detect;
         private readonly object _lock = new();
 
         public string CurrentModelPath => _currentModelPath;
         public bool IsModelLoaded => _isModelLoaded;
+        public YoloModelType CurrentModelType => _currentModelType;
 
         public YoloDetector()
         {
@@ -63,6 +65,16 @@ namespace Client.Services
                     _session = new InferenceSession(modelPath, options);
                     _currentModelPath = modelPath;
 
+                    // Đọc metadata "task" để nhận biết loại model (detect hoặc obb)
+                    _currentModelType = YoloModelType.Detect;
+                    if (_session.ModelMetadata.CustomMetadataMap.TryGetValue("task", out var taskMetadata))
+                    {
+                        if (taskMetadata.Contains("obb", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _currentModelType = YoloModelType.Obb;
+                        }
+                    }
+
                     // Thử trích xuất nhãn từ Metadata của model ONNX
                     _classNames.Clear();
                     if (_session.ModelMetadata.CustomMetadataMap.TryGetValue("names", out var namesMetadata))
@@ -96,14 +108,37 @@ namespace Client.Services
                         _classNames = new List<string> { "object" };
                     }
 
+                    // Nếu metadata chưa có task, kiểm tra qua Output Tensor shape
+                    if (_currentModelType == YoloModelType.Detect)
+                    {
+                        try
+                        {
+                            var firstOutput = _session.OutputMetadata.First();
+                            var dims = firstOutput.Value.Dimensions;
+                            if (dims != null && dims.Length == 3)
+                            {
+                                int channels = dims[1];
+                                if (channels > 0 && channels == 5 + _classNames.Count)
+                                {
+                                    _currentModelType = YoloModelType.Obb;
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // Bỏ qua lỗi đọc output metadata nếu có
+                        }
+                    }
+
                     _isModelLoaded = true;
-                    Console.WriteLine($"ONNX Model loaded successfully from {modelPath}. Detected {_classNames.Count} classes.");
+                    Console.WriteLine($"ONNX Model loaded successfully from {modelPath}. Type: {_currentModelType}, Detected {_classNames.Count} classes.");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error loading ONNX model: {ex.Message}. Falling back to Mock Mode.");
                     _session = null;
                     _currentModelPath = "MockMode";
+                    _currentModelType = YoloModelType.Detect;
                     _classNames = new List<string> { "screw", "nut", "washer", "bolt" };
                 }
             }
@@ -292,6 +327,19 @@ namespace Client.Services
                     {
                         obj.X += rx;
                         obj.Y += ry;
+                        if (obj.IsObb)
+                        {
+                            obj.CenterX += rx;
+                            obj.CenterY += ry;
+                            if (obj.Points != null)
+                            {
+                                foreach (var pt in obj.Points)
+                                {
+                                    pt.X += rx;
+                                    pt.Y += ry;
+                                }
+                            }
+                        }
                     }
                 }
                 else
@@ -355,6 +403,7 @@ namespace Client.Services
                 response.Result.Timestamp = DateTime.Now;
                 response.Result.ProcessingTimeMs = stopwatch.Elapsed.TotalMilliseconds;
                 response.Result.ModelPath = _currentModelPath;
+                response.Result.ModelType = _currentModelType == YoloModelType.Obb ? "OBB" : "Detect";
             }
             catch (Exception ex)
             {
@@ -454,6 +503,19 @@ namespace Client.Services
                     {
                         obj.X += tx;
                         obj.Y += ty;
+                        if (obj.IsObb)
+                        {
+                            obj.CenterX += tx;
+                            obj.CenterY += ty;
+                            if (obj.Points != null)
+                            {
+                                foreach (var pt in obj.Points)
+                                {
+                                    pt.X += tx;
+                                    pt.Y += ty;
+                                }
+                            }
+                        }
                         allObjects.Add(obj);
                     }
                 }
@@ -465,17 +527,24 @@ namespace Client.Services
             }
 
             // Áp dụng NMS để lọc trùng lặp giữa các tile
-            var boxes = allObjects.Select(o => new Rect((int)o.X, (int)o.Y, (int)o.Width, (int)o.Height)).ToList();
-            var confidences = allObjects.Select(o => o.Confidence).ToList();
-            CvDnn.NMSBoxes(boxes, confidences, confidenceThreshold, nmsThreshold, out int[] indices);
-
-            var results = new List<DetectedObject>();
-            foreach (int idx in indices)
+            if (allObjects.Any(o => o.IsObb))
             {
-                results.Add(allObjects[idx]);
+                return ApplyRotatedNms(allObjects, nmsThreshold);
             }
+            else
+            {
+                var boxes = allObjects.Select(o => new Rect((int)o.X, (int)o.Y, (int)o.Width, (int)o.Height)).ToList();
+                var confidences = allObjects.Select(o => o.Confidence).ToList();
+                CvDnn.NMSBoxes(boxes, confidences, confidenceThreshold, nmsThreshold, out int[] indices);
 
-            return results;
+                var results = new List<DetectedObject>();
+                foreach (int idx in indices)
+                {
+                    results.Add(allObjects[idx]);
+                }
+
+                return results;
+            }
         }
 
         private List<DetectedObject> RunOnnxInference(Mat src, float confidenceThreshold, float nmsThreshold, bool useLetterbox)
@@ -564,92 +633,17 @@ namespace Client.Services
             
             if (dimensions.Length == 3 && dimensions[1] < dimensions[2])
             {
-                // YOLOv8 Format
-                int rows = dimensions[1]; // 4 + num_classes
-                int numClasses = rows - 4;
-                int numAnchors = dimensions[2];
-                float[] data = outputTensor.ToArray();
+                // YOLOv8 / YOLO11 Format [1, channels, num_anchors]
+                int rows = dimensions[1];
+                bool isObb = _currentModelType == YoloModelType.Obb || (rows == 5 + _classNames.Count);
 
-                var boxes = new List<Rect>();
-                var confidences = new List<float>();
-                var classIds = new List<int>();
-
-                // Tỷ lệ scale tọa độ về kích thước ảnh gốc (nếu không dùng letterbox)
-                float scaleX = (float)src.Width / inputWidth;
-                float scaleY = (float)src.Height / inputHeight;
-
-                for (int i = 0; i < numAnchors; i++)
+                if (isObb)
                 {
-                    // Lấy điểm tin cậy cao nhất của các lớp
-                    float maxClassScore = 0f;
-                    int maxClassId = -1;
-
-                    for (int c = 0; c < numClasses; c++)
-                    {
-                        float classScore = data[(4 + c) * numAnchors + i];
-                        if (classScore > maxClassScore)
-                        {
-                            maxClassScore = classScore;
-                            maxClassId = c;
-                        }
-                    }
-
-                    if (maxClassScore >= confidenceThreshold)
-                    {
-                        // YOLOv8 lưu center_x, center_y, width, height
-                        float cx = data[0 * numAnchors + i];
-                        float cy = data[1 * numAnchors + i];
-                        float w = data[2 * numAnchors + i];
-                        float h = data[3 * numAnchors + i];
-
-                        // Đổi sang x_min, y_min, w, h
-                        float lx = cx - w / 2f;
-                        float ty = cy - h / 2f;
-
-                        float x, y, boxW, boxH;
-                        if (useLetterbox)
-                        {
-                            x = (lx - padW) / (float)scale;
-                            y = (ty - padH) / (float)scale;
-                            boxW = w / (float)scale;
-                            boxH = h / (float)scale;
-                        }
-                        else
-                        {
-                            x = lx * scaleX;
-                            y = ty * scaleY;
-                            boxW = w * scaleX;
-                            boxH = h * scaleY;
-                        }
-
-                        // Giới hạn tọa độ trong ảnh gốc
-                        int ix = Math.Clamp((int)x, 0, src.Width - 1);
-                        int iy = Math.Clamp((int)y, 0, src.Height - 1);
-                        int iw = Math.Clamp((int)boxW, 1, src.Width - ix);
-                        int ih = Math.Clamp((int)boxH, 1, src.Height - iy);
-
-                        boxes.Add(new Rect(ix, iy, iw, ih));
-                        confidences.Add(maxClassScore);
-                        classIds.Add(maxClassId);
-                    }
+                    results = ParseObbOutput(outputTensor, src, inputWidth, inputHeight, confidenceThreshold, nmsThreshold, useLetterbox, scale, padW, padH);
                 }
-
-                // Chạy thuật toán lọc trùng NMS
-                CvDnn.NMSBoxes(boxes, confidences, confidenceThreshold, nmsThreshold, out int[] indices);
-
-                foreach (int idx in indices)
+                else
                 {
-                    var rect = boxes[idx];
-                    results.Add(new DetectedObject
-                    {
-                        ClassId = classIds[idx],
-                        ClassName = classIds[idx] < _classNames.Count ? _classNames[classIds[idx]] : $"class_{classIds[idx]}",
-                        Confidence = confidences[idx],
-                        X = (float)rect.X,
-                        Y = (float)rect.Y,
-                        Width = (float)rect.Width,
-                        Height = (float)rect.Height
-                    });
+                    results = ParseDetectV8Output(outputTensor, src, inputWidth, inputHeight, confidenceThreshold, nmsThreshold, useLetterbox, scale, padW, padH);
                 }
             }
             else if (dimensions.Length == 3)
@@ -739,12 +733,322 @@ namespace Client.Services
                         X = (float)rect.X,
                         Y = (float)rect.Y,
                         Width = (float)rect.Width,
-                        Height = (float)rect.Height
+                        Height = (float)rect.Height,
+                        IsObb = false
                     });
                 }
             }
 
             return results;
+        }
+
+        private List<DetectedObject> ParseDetectV8Output(
+            Tensor<float> outputTensor,
+            Mat src,
+            int inputWidth,
+            int inputHeight,
+            float confidenceThreshold,
+            float nmsThreshold,
+            bool useLetterbox,
+            double scale,
+            int padW,
+            int padH)
+        {
+            var results = new List<DetectedObject>();
+            var dimensions = outputTensor.Dimensions;
+            int rows = dimensions[1]; // 4 + num_classes
+            int numClasses = rows - 4;
+            int numAnchors = dimensions[2];
+            float[] data = outputTensor.ToArray();
+
+            var boxes = new List<Rect>();
+            var confidences = new List<float>();
+            var classIds = new List<int>();
+
+            float scaleX = (float)src.Width / inputWidth;
+            float scaleY = (float)src.Height / inputHeight;
+
+            for (int i = 0; i < numAnchors; i++)
+            {
+                float maxClassScore = 0f;
+                int maxClassId = -1;
+
+                for (int c = 0; c < numClasses; c++)
+                {
+                    float classScore = data[(4 + c) * numAnchors + i];
+                    if (classScore > maxClassScore)
+                    {
+                        maxClassScore = classScore;
+                        maxClassId = c;
+                    }
+                }
+
+                if (maxClassScore >= confidenceThreshold)
+                {
+                    float cx = data[0 * numAnchors + i];
+                    float cy = data[1 * numAnchors + i];
+                    float w = data[2 * numAnchors + i];
+                    float h = data[3 * numAnchors + i];
+
+                    float lx = cx - w / 2f;
+                    float ty = cy - h / 2f;
+
+                    float x, y, boxW, boxH;
+                    if (useLetterbox)
+                    {
+                        x = (lx - padW) / (float)scale;
+                        y = (ty - padH) / (float)scale;
+                        boxW = w / (float)scale;
+                        boxH = h / (float)scale;
+                    }
+                    else
+                    {
+                        x = lx * scaleX;
+                        y = ty * scaleY;
+                        boxW = w * scaleX;
+                        boxH = h * scaleY;
+                    }
+
+                    int ix = Math.Clamp((int)x, 0, src.Width - 1);
+                    int iy = Math.Clamp((int)y, 0, src.Height - 1);
+                    int iw = Math.Clamp((int)boxW, 1, src.Width - ix);
+                    int ih = Math.Clamp((int)boxH, 1, src.Height - iy);
+
+                    boxes.Add(new Rect(ix, iy, iw, ih));
+                    confidences.Add(maxClassScore);
+                    classIds.Add(maxClassId);
+                }
+            }
+
+            CvDnn.NMSBoxes(boxes, confidences, confidenceThreshold, nmsThreshold, out int[] indices);
+
+            foreach (int idx in indices)
+            {
+                var rect = boxes[idx];
+                results.Add(new DetectedObject
+                {
+                    ClassId = classIds[idx],
+                    ClassName = classIds[idx] < _classNames.Count ? _classNames[classIds[idx]] : $"class_{classIds[idx]}",
+                    Confidence = confidences[idx],
+                    X = (float)rect.X,
+                    Y = (float)rect.Y,
+                    Width = (float)rect.Width,
+                    Height = (float)rect.Height,
+                    IsObb = false
+                });
+            }
+
+            return results;
+        }
+
+        private List<DetectedObject> ParseObbOutput(
+            Tensor<float> outputTensor,
+            Mat src,
+            int inputWidth,
+            int inputHeight,
+            float confidenceThreshold,
+            float nmsThreshold,
+            bool useLetterbox,
+            double scale,
+            int padW,
+            int padH)
+        {
+            var dimensions = outputTensor.Dimensions;
+            int rows = dimensions[1]; // 5 + num_classes (cx, cy, w, h, cls_0..cls_N, theta)
+            int numClasses = rows - 5;
+            int numAnchors = dimensions[2];
+            float[] data = outputTensor.ToArray();
+
+            var candidateObjects = new List<DetectedObject>();
+
+            float scaleX = (float)src.Width / inputWidth;
+            float scaleY = (float)src.Height / inputHeight;
+
+            for (int i = 0; i < numAnchors; i++)
+            {
+                float maxClassScore = 0f;
+                int maxClassId = -1;
+
+                // Các kênh class scores nằm từ index 4 đến 4 + numClasses - 1
+                for (int c = 0; c < numClasses; c++)
+                {
+                    float classScore = data[(4 + c) * numAnchors + i];
+                    if (classScore > maxClassScore)
+                    {
+                        maxClassScore = classScore;
+                        maxClassId = c;
+                    }
+                }
+
+                if (maxClassScore >= confidenceThreshold)
+                {
+                    float cx = data[0 * numAnchors + i];
+                    float cy = data[1 * numAnchors + i];
+                    float w = data[2 * numAnchors + i];
+                    float h = data[3 * numAnchors + i];
+                    float angleRad = data[(4 + numClasses) * numAnchors + i]; // Góc radian
+
+                    float origCx, origCy, origW, origH;
+                    if (useLetterbox)
+                    {
+                        origCx = (cx - padW) / (float)scale;
+                        origCy = (cy - padH) / (float)scale;
+                        origW = w / (float)scale;
+                        origH = h / (float)scale;
+                    }
+                    else
+                    {
+                        origCx = cx * scaleX;
+                        origCy = cy * scaleY;
+                        origW = w * scaleX;
+                        origH = h * scaleY;
+                    }
+
+                    // Tính toán 4 đỉnh xoay theo công thức chuẩn Ultralytics OBB
+                    float cos = (float)Math.Cos(angleRad);
+                    float sin = (float)Math.Sin(angleRad);
+                    float dx = cos * (origW / 2f);
+                    float dy = sin * (origW / 2f);
+                    float ex = -sin * (origH / 2f);
+                    float ey = cos * (origH / 2f);
+
+                    var p0 = new DetectedPoint(origCx - dx - ex, origCy - dy - ey);
+                    var p1 = new DetectedPoint(origCx + dx - ex, origCy + dy - ey);
+                    var p2 = new DetectedPoint(origCx + dx + ex, origCy + dy + ey);
+                    var p3 = new DetectedPoint(origCx - dx + ex, origCy - dy + ey);
+
+                    // Tính AABB bao ngoài
+                    float minX = Math.Min(Math.Min(p0.X, p1.X), Math.Min(p2.X, p3.X));
+                    float minY = Math.Min(Math.Min(p0.Y, p1.Y), Math.Min(p2.Y, p3.Y));
+                    float maxX = Math.Max(Math.Max(p0.X, p1.X), Math.Max(p2.X, p3.X));
+                    float maxY = Math.Max(Math.Max(p0.Y, p1.Y), Math.Max(p2.Y, p3.Y));
+
+                    int ix = Math.Clamp((int)minX, 0, src.Width - 1);
+                    int iy = Math.Clamp((int)minY, 0, src.Height - 1);
+                    int iw = Math.Clamp((int)(maxX - minX), 1, src.Width - ix);
+                    int ih = Math.Clamp((int)(maxY - minY), 1, src.Height - iy);
+
+                    float angleDeg = (float)(angleRad * 180.0 / Math.PI);
+
+                    candidateObjects.Add(new DetectedObject
+                    {
+                        ClassId = maxClassId,
+                        ClassName = maxClassId >= 0 && maxClassId < _classNames.Count ? _classNames[maxClassId] : $"class_{maxClassId}",
+                        Confidence = maxClassScore,
+                        X = ix,
+                        Y = iy,
+                        Width = iw,
+                        Height = ih,
+                        IsObb = true,
+                        Angle = angleRad,
+                        AngleDegree = angleDeg,
+                        CenterX = origCx,
+                        CenterY = origCy,
+                        Points = new List<DetectedPoint> { p0, p1, p2, p3 }
+                    });
+                }
+            }
+
+            return ApplyRotatedNms(candidateObjects, nmsThreshold);
+        }
+
+        private List<DetectedObject> ApplyRotatedNms(List<DetectedObject> candidates, float nmsThreshold)
+        {
+            if (candidates.Count <= 1)
+                return candidates;
+
+            var sorted = candidates.OrderByDescending(o => o.Confidence).ToList();
+            var results = new List<DetectedObject>();
+            var suppressed = new bool[sorted.Count];
+
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                if (suppressed[i])
+                    continue;
+
+                var current = sorted[i];
+                results.Add(current);
+
+                for (int j = i + 1; j < sorted.Count; j++)
+                {
+                    if (suppressed[j])
+                        continue;
+
+                    var other = sorted[j];
+
+                    // Class-aware NMS: cùng lớp mới triệt tiêu lẫn nhau
+                    if (current.ClassId != other.ClassId)
+                        continue;
+
+                    float iou = ComputeRotatedIoU(current, other);
+                    if (iou >= nmsThreshold)
+                    {
+                        suppressed[j] = true;
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        private float ComputeRotatedIoU(DetectedObject boxA, DetectedObject boxB)
+        {
+            try
+            {
+                if (boxA.Points == null || boxA.Points.Count < 4 || boxB.Points == null || boxB.Points.Count < 4)
+                {
+                    return ComputeAabbIoU(boxA, boxB);
+                }
+
+                float wA = (float)Math.Sqrt(Math.Pow(boxA.Points[1].X - boxA.Points[0].X, 2) + Math.Pow(boxA.Points[1].Y - boxA.Points[0].Y, 2));
+                float hA = (float)Math.Sqrt(Math.Pow(boxA.Points[2].X - boxA.Points[1].X, 2) + Math.Pow(boxA.Points[2].Y - boxA.Points[1].Y, 2));
+                if (wA <= 0f || hA <= 0f) return ComputeAabbIoU(boxA, boxB);
+
+                float wB = (float)Math.Sqrt(Math.Pow(boxB.Points[1].X - boxB.Points[0].X, 2) + Math.Pow(boxB.Points[1].Y - boxB.Points[0].Y, 2));
+                float hB = (float)Math.Sqrt(Math.Pow(boxB.Points[2].X - boxB.Points[1].X, 2) + Math.Pow(boxB.Points[2].Y - boxB.Points[1].Y, 2));
+                if (wB <= 0f || hB <= 0f) return ComputeAabbIoU(boxA, boxB);
+
+                var rectA = new RotatedRect(new Point2f(boxA.CenterX, boxA.CenterY), new Size2f(wA, hA), boxA.AngleDegree);
+                var rectB = new RotatedRect(new Point2f(boxB.CenterX, boxB.CenterY), new Size2f(wB, hB), boxB.AngleDegree);
+
+                var intersectType = Cv2.RotatedRectangleIntersection(rectA, rectB, out Point2f[] vertices);
+                if ((int)intersectType != 0 && vertices != null && vertices.Length >= 3)
+                {
+                    double interArea = Cv2.ContourArea(vertices);
+                    double areaA = wA * hA;
+                    double areaB = wB * hB;
+                    double unionArea = areaA + areaB - interArea;
+
+                    if (unionArea > 0)
+                    {
+                        return (float)(interArea / unionArea);
+                    }
+                }
+            }
+            catch
+            {
+                return ComputeAabbIoU(boxA, boxB);
+            }
+
+            return 0f;
+        }
+
+        private float ComputeAabbIoU(DetectedObject boxA, DetectedObject boxB)
+        {
+            float x1 = Math.Max(boxA.X, boxB.X);
+            float y1 = Math.Max(boxA.Y, boxB.Y);
+            float x2 = Math.Min(boxA.X + boxA.Width, boxB.X + boxB.Width);
+            float y2 = Math.Min(boxA.Y + boxA.Height, boxB.Y + boxB.Height);
+
+            float w = Math.Max(0f, x2 - x1);
+            float h = Math.Max(0f, y2 - y1);
+            float interArea = w * h;
+
+            float areaA = boxA.Width * boxA.Height;
+            float areaB = boxB.Width * boxB.Height;
+            float unionArea = areaA + areaB - interArea;
+
+            return unionArea > 0 ? (interArea / unionArea) : 0f;
         }
 
         private List<DetectedObject> GenerateMockDetections(int width, int height, int? targetClassCode = null)
@@ -760,22 +1064,59 @@ namespace Client.Services
                 if (classId >= _classNames.Count) classId = 0;
                 float confidence = (float)(random.NextDouble() * 0.4 + 0.55); // 0.55 - 0.95
 
-                // Tạo bounding box ngẫu nhiên trong vùng ảnh
                 float w = random.Next(40, 150);
                 float h = random.Next(40, 150);
-                float x = random.Next(50, width - (int)w - 50);
-                float y = random.Next(50, height - (int)h - 50);
+                float x = random.Next(50, Math.Max(60, width - (int)w - 50));
+                float y = random.Next(50, Math.Max(60, height - (int)h - 50));
 
-                list.Add(new DetectedObject
+                if (_currentModelType == YoloModelType.Obb)
                 {
-                    ClassId = classId,
-                    ClassName = classId < _classNames.Count ? _classNames[classId] : $"class_{classId}",
-                    Confidence = confidence,
-                    X = x,
-                    Y = y,
-                    Width = w,
-                    Height = h
-                });
+                    float cx = x + w / 2f;
+                    float cy = y + h / 2f;
+                    float angleRad = (float)(random.NextDouble() * Math.PI - Math.PI / 4.0); // [-pi/4, 3pi/4]
+                    float cos = (float)Math.Cos(angleRad);
+                    float sin = (float)Math.Sin(angleRad);
+                    float dx = cos * (w / 2f);
+                    float dy = sin * (w / 2f);
+                    float ex = -sin * (h / 2f);
+                    float ey = cos * (h / 2f);
+
+                    var p0 = new DetectedPoint(cx - dx - ex, cy - dy - ey);
+                    var p1 = new DetectedPoint(cx + dx - ex, cy + dy - ey);
+                    var p2 = new DetectedPoint(cx + dx + ex, cy + dy + ey);
+                    var p3 = new DetectedPoint(cx - dx + ex, cy - dy + ey);
+
+                    list.Add(new DetectedObject
+                    {
+                        ClassId = classId,
+                        ClassName = classId < _classNames.Count ? _classNames[classId] : $"class_{classId}",
+                        Confidence = confidence,
+                        X = x,
+                        Y = y,
+                        Width = w,
+                        Height = h,
+                        IsObb = true,
+                        Angle = angleRad,
+                        AngleDegree = (float)(angleRad * 180.0 / Math.PI),
+                        CenterX = cx,
+                        CenterY = cy,
+                        Points = new List<DetectedPoint> { p0, p1, p2, p3 }
+                    });
+                }
+                else
+                {
+                    list.Add(new DetectedObject
+                    {
+                        ClassId = classId,
+                        ClassName = classId < _classNames.Count ? _classNames[classId] : $"class_{classId}",
+                        Confidence = confidence,
+                        X = x,
+                        Y = y,
+                        Width = w,
+                        Height = h,
+                        IsObb = false
+                    });
+                }
             }
 
             return list;
@@ -795,24 +1136,46 @@ namespace Client.Services
             foreach (var obj in detectedObjects)
             {
                 var color = colors[obj.ClassId % colors.Length];
-                var rect = new Rect((int)obj.X, (int)obj.Y, (int)obj.Width, (int)obj.Height);
-                
-                // Vẽ hình chữ nhật
-                Cv2.Rectangle(src, rect, color, 3);
-
-                // Viết số thứ tự đếm thay vì nhãn lớp và độ tin cậy
                 string label = count.ToString();
                 count++;
 
                 int baseLine;
                 var labelSize = Cv2.GetTextSize(label, HersheyFonts.HersheySimplex, 0.6, 1, out baseLine);
-                
-                var labelRect = new Rect(rect.X, rect.Y - labelSize.Height - 5, labelSize.Width, labelSize.Height + 5);
-                if (labelRect.Y < 0) labelRect.Y = 0;
 
-                Cv2.Rectangle(src, labelRect, color, -1); // Vẽ đè hình chữ nhật đặc làm nền chữ
-                Cv2.PutText(src, label, new Point(rect.X, labelRect.Y + labelSize.Height), 
-                    HersheyFonts.HersheySimplex, 0.6, new Scalar(255, 255, 255), 2, LineTypes.AntiAlias);
+                if (obj.IsObb && obj.Points != null && obj.Points.Count == 4)
+                {
+                    // 1. Vẽ đa giác OBB bằng 4 đỉnh xoay
+                    var pts = obj.Points.Select(p => new Point((int)Math.Round(p.X), (int)Math.Round(p.Y))).ToArray();
+                    Cv2.Polylines(src, new[] { pts }, isClosed: true, color: color, thickness: 3, lineType: LineTypes.AntiAlias);
+
+                    // Vẽ chấm tròn nhỏ tại tâm
+                    Cv2.Circle(src, new Point((int)Math.Round(obj.CenterX), (int)Math.Round(obj.CenterY)), 4, color, -1);
+
+                    // 2. Đặt nhãn số thứ tự ở vị trí đỉnh trên cùng (Y nhỏ nhất)
+                    var topPoint = pts.OrderBy(p => p.Y).First();
+                    int labelX = Math.Clamp(topPoint.X - labelSize.Width / 2, 0, Math.Max(0, src.Width - labelSize.Width - 1));
+                    int labelY = topPoint.Y - 5;
+                    if (labelY - labelSize.Height < 0) labelY = labelSize.Height + 5;
+
+                    var labelRect = new Rect(labelX, labelY - labelSize.Height - 5, labelSize.Width, labelSize.Height + 5);
+                    Cv2.Rectangle(src, labelRect, color, -1);
+                    Cv2.PutText(src, label, new Point(labelX, labelY),
+                        HersheyFonts.HersheySimplex, 0.6, new Scalar(255, 255, 255), 2, LineTypes.AntiAlias);
+                }
+                else
+                {
+                    var rect = new Rect((int)obj.X, (int)obj.Y, (int)obj.Width, (int)obj.Height);
+
+                    // Vẽ hình chữ nhật
+                    Cv2.Rectangle(src, rect, color, 3);
+
+                    var labelRect = new Rect(rect.X, rect.Y - labelSize.Height - 5, labelSize.Width, labelSize.Height + 5);
+                    if (labelRect.Y < 0) labelRect.Y = 0;
+
+                    Cv2.Rectangle(src, labelRect, color, -1); // Vẽ đè hình chữ nhật đặc làm nền chữ
+                    Cv2.PutText(src, label, new Point(rect.X, labelRect.Y + labelSize.Height), 
+                        HersheyFonts.HersheySimplex, 0.6, new Scalar(255, 255, 255), 2, LineTypes.AntiAlias);
+                }
             }
         }
 
